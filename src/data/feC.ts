@@ -1,0 +1,45 @@
+import type { PhaseDiagramDefinition } from './types';
+
+export const feC: PhaseDiagramDefinition = {
+  id:'fe-c', title:'Fe–Fe₃C 铁碳相图', shortTitle:'Fe–Fe₃C 铁碳', systemType:'亚稳铁–渗碳体教学相图', components:{left:'Fe',right:'Fe₃C'},
+  compositionAxis:{min:0,max:6.69,ticks:[0,0.77,2.11,4.3,6.69],label:'wC / %'}, temperatureAxis:{min:600,max:1600,ticks:[600,727,912,1148,1394,1495,1600],label:'温度 / ℃'},
+  boundaries:[
+    {id:'liquidus-delta',kind:'liquidus',phases:['L','L+δ'],points:[[0,1538],[0.25,1518],[0.53,1495]]},
+    {id:'delta-solidus',kind:'solidus',phases:['δ','L+δ'],points:[[0,1538],[0.04,1515],[0.09,1495]]},
+    {id:'delta-gamma',kind:'phase',phases:['δ','δ+γ'],points:[[0,1394],[0.05,1445],[0.09,1495]]},
+    {id:'gamma-delta',kind:'phase',phases:['δ+γ','γ'],points:[[0,1394],[0.08,1430],[0.17,1495]]},
+    {id:'liquidus-gamma',kind:'liquidus',phases:['L','L+γ'],points:[[0.53,1495],[1.2,1405],[2.2,1305],[3.2,1215],[4.3,1148]]},
+    {id:'gamma-solidus',kind:'solidus',phases:['γ','L+γ'],points:[[0.17,1495],[0.5,1410],[1.1,1300],[1.7,1205],[2.11,1148]]},
+    {id:'liquidus-cementite',kind:'liquidus',phases:['L','L+Fe₃C'],dashed:true,points:[[4.3,1148],[5.1,1170],[5.9,1198],[6.69,1227]]},
+    {id:'a3',kind:'phase',phases:['γ','α+γ'],points:[[0,912],[0.15,870],[0.35,820],[0.55,770],[0.77,727]]},
+    {id:'gp',kind:'phase',phases:['α','α+γ'],points:[[0,912],[0.0218,727]]},
+    {id:'alpha-solvus',kind:'solvus',phases:['α','α+γ'],points:[[0.008,600],[0.012,650],[0.0218,727]]},
+    {id:'acm',kind:'solvus',phases:['γ','γ+Fe₃C'],points:[[0.77,727],[1.15,850],[1.55,980],[1.85,1080],[2.11,1148]]},
+    {id:'cementite',kind:'compound',phases:['Fe₃C'],points:[[6.69,600],[6.69,1227]]},
+  ],
+  regions:[
+    {id:'liquid',label:'L',phases:['L'],labelAnchor:[3.7,1480],teaching:'合金完全处于液态。',outline:[{type:'boundary',boundaryId:'liquidus-delta'},{type:'boundary',boundaryId:'liquidus-gamma'},{type:'boundary',boundaryId:'liquidus-cementite'},{type:'line',points:[[6.69,1600],[0,1600]]}]},
+    {id:'delta',label:'δ',phases:['δ'],labelAnchor:[0.045,1480],labelOffset:{dx:20,dy:-15},teaching:'高温 δ 铁素体单相区，具有体心立方结构。',outline:[{type:'boundary',boundaryId:'delta-solidus'},{type:'boundary',boundaryId:'delta-gamma',reverse:true},{type:'line',points:[[0,1394],[0,1538]]}]},
+    {id:'liquid-delta',label:'L + δ',phases:['L','δ'],labelAnchor:[0.25,1505],labelOffset:{dx:60,dy:-8},teaching:'液相与 δ 铁素体共存，接近 1495℃ 时可参与包晶反应。',tieLine:{left:{phase:'δ',boundaryId:'delta-solidus'},right:{phase:'L',boundaryId:'liquidus-delta'}},outline:[{type:'boundary',boundaryId:'liquidus-delta'},{type:'line',points:[[0.53,1495],[0.09,1495]]},{type:'boundary',boundaryId:'delta-solidus',reverse:true}]},
+    {id:'delta-gamma',label:'δ + γ',phases:['δ','γ'],labelAnchor:[0.12,1470],labelOffset:{dx:72,dy:45},teaching:'δ 铁素体与 γ 奥氏体平衡共存。',tieLine:{left:{phase:'δ',boundaryId:'delta-gamma'},right:{phase:'γ',boundaryId:'gamma-delta'}},outline:[{type:'boundary',boundaryId:'delta-gamma'},{type:'boundary',boundaryId:'gamma-delta',reverse:true}]},
+    {id:'liquid-gamma',label:'L + γ',phases:['L','γ'],labelAnchor:[1.7,1330],teaching:'液相与 γ 奥氏体平衡共存。',tieLine:{left:{phase:'γ',boundaryId:'gamma-solidus'},right:{phase:'L',boundaryId:'liquidus-gamma'}},outline:[{type:'boundary',boundaryId:'liquidus-gamma'},{type:'line',points:[[4.3,1148],[2.11,1148]]},{type:'boundary',boundaryId:'gamma-solidus',reverse:true},{type:'line',points:[[0.17,1495],[0.53,1495]]}]},
+    {id:'liquid-cementite',label:'L + Fe₃C',phases:['L','Fe₃C'],labelAnchor:[5.7,1175],teaching:'液相与渗碳体平衡共存。',tieLine:{left:{phase:'L',boundaryId:'liquidus-cementite'},right:{phase:'Fe₃C',boundaryId:'cementite'}},outline:[{type:'boundary',boundaryId:'liquidus-cementite'},{type:'line',points:[[6.69,1227],[6.69,1148],[4.3,1148]]}]},
+    {id:'gamma',label:'γ',phases:['γ'],labelAnchor:[1.1,1050],teaching:'γ 奥氏体单相区，碳在面心立方铁中的间隙固溶度较高。',outline:[{type:'boundary',boundaryId:'gamma-delta'},{type:'boundary',boundaryId:'gamma-solidus'},{type:'boundary',boundaryId:'acm',reverse:true},{type:'boundary',boundaryId:'a3',reverse:true},{type:'line',points:[[0,912],[0,1394]]}]},
+    {id:'alpha-gamma',label:'α + γ',phases:['α','γ'],labelAnchor:[0.30,800],teaching:'铁素体与奥氏体两相平衡共存。',tieLine:{left:{phase:'α',boundaryId:'gp'},right:{phase:'γ',boundaryId:'a3'}},outline:[{type:'boundary',boundaryId:'gp'},{type:'line',points:[[0.0218,727],[0.77,727]]},{type:'boundary',boundaryId:'a3',reverse:true}]},
+    {id:'alpha',label:'α',phases:['α'],labelAnchor:[0.004,800],labelOffset:{dx:32,dy:18},teaching:'低碳 α 铁素体单相区，碳固溶度很低。',outline:[{type:'boundary',boundaryId:'gp'},{type:'boundary',boundaryId:'alpha-solvus',reverse:true},{type:'line',points:[[0.008,600],[0,600],[0,912]]}]},
+    {id:'gamma-cementite',label:'γ + Fe₃C',phases:['γ','Fe₃C'],labelAnchor:[3.6,930],teaching:'奥氏体与渗碳体两相共存，可由 Acm 线和 Fe₃C 端点应用杠杆定律。',tieLine:{left:{phase:'γ',boundaryId:'acm'},right:{phase:'Fe₃C',boundaryId:'cementite'}},outline:[{type:'boundary',boundaryId:'acm'},{type:'line',points:[[2.11,1148],[6.69,1148],[6.69,727],[0.77,727]]}]},
+    {id:'alpha-cementite',label:'α + Fe₃C',phases:['α','Fe₃C'],labelAnchor:[3.2,665],teaching:'共析温度以下铁素体与渗碳体两相共存。',tieLine:{left:{phase:'α',boundaryId:'alpha-solvus'},right:{phase:'Fe₃C',boundaryId:'cementite'}},outline:[{type:'boundary',boundaryId:'alpha-solvus'},{type:'line',points:[[0.0218,727],[6.69,727],[6.69,600],[0.008,600]]}]},
+  ],
+  invariants:[
+    {id:'peritectic',type:'peritectic',temperature:1495,equation:'L + δ → γ',points:{left:0.09,middle:0.17,right:0.53},phaseCompositions:[{phase:'δ',composition:0.09},{phase:'γ',composition:0.17},{phase:'L',composition:0.53}],teaching:'1495℃ 包晶反应：液相与 δ 铁素体共同生成 γ 奥氏体。'},
+    {id:'eutectic',type:'eutectic',temperature:1148,equation:'L → γ + Fe₃C',points:{left:2.11,middle:4.3,right:6.69},phaseCompositions:[{phase:'γ',composition:2.11},{phase:'L',composition:4.3},{phase:'Fe₃C',composition:6.69}],teaching:'1148℃ 共晶反应：液相转变为 γ 奥氏体和 Fe₃C。'},
+    {id:'eutectoid',type:'eutectoid',temperature:727,equation:'γ → α + Fe₃C',points:{left:0.0218,middle:0.77,right:6.69},phaseCompositions:[{phase:'α',composition:0.0218},{phase:'γ',composition:0.77},{phase:'Fe₃C',composition:6.69}],teaching:'727℃ 共析反应：γ 奥氏体转变为 α 铁素体和 Fe₃C。'},
+  ],
+  keyPoints:[
+    {label:'H 0.09',composition:0.09,temperature:1495,dx:12,dy:-26},{label:'J 0.17',composition:0.17,temperature:1495,dx:22,dy:30},{label:'B 0.53',composition:0.53,temperature:1495,dx:10,dy:-12},
+    {label:'E 2.11',composition:2.11,temperature:1148,dx:-45,dy:-10},{label:'C 4.30',composition:4.3,temperature:1148,dx:-20,dy:20},{label:'S 0.77',composition:0.77,temperature:727,dx:5,dy:20},
+    {label:'G',composition:0,temperature:912,dx:12,dy:-10},{label:'N',composition:0,temperature:1394,dx:12,dy:18},{label:'P 0.0218',composition:0.0218,temperature:727,dx:14,dy:36},{label:'D 6.69',composition:6.69,temperature:1227,dx:-58,dy:-10},
+  ],
+  annotations:[{id:'cementite-label',kind:'phase',text:'Fe₃C',anchor:[6.69,880],offset:{dx:-34,dy:0},leader:true}],
+  defaultState:{composition:1.2,temperature:1250}, teaching:{overview:'Fe–Fe₃C 亚稳相图包含包晶、共晶和共析三类重要反应，是钢铁材料热处理与组织分析的基础。'},
+};
