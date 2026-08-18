@@ -74,8 +74,8 @@
   --lab-info-value-weight: 700;
   --lab-balance-meta-size: 13px;
   --lab-balance-value-size: 15px;
-  --lab-reaction-title-size: 14px;
-  --lab-reaction-detail-size: 13px;
+  --lab-reaction-title-size: 15px;
+  --lab-reaction-detail-size: 15px;
   --lab-teaching-text-size: 15px;
 }
 
@@ -358,15 +358,38 @@
   font-size: var(--lab-reaction-detail-size);
 }
 
+.reaction-card,
+.teaching-card {
+  min-height: 0;
+  flex: 0 0 auto;
+  padding-bottom: 22px;
+}
+
+.reaction-content {
+  padding: 22px 24px 0;
+  color: #d8e4f2;
+}
+
+.reaction-content strong {
+  line-height: 1.9;
+}
+
 .reaction-content span {
+  margin-top: 0;
   font-size: var(--lab-reaction-detail-size);
+  color: #d8e4f2;
+  line-height: 1.9;
 }
 
 .reaction-card:not(.active) .reaction-content strong {
   font-size: var(--lab-reaction-title-size);
+  color: #d8e4f2;
 }
 
 .teaching-card p {
+  margin: 0;
+  padding: 22px 24px 0;
+  color: #d8e4f2;
   font-size: var(--lab-teaching-text-size);
   line-height: 1.9;
 }

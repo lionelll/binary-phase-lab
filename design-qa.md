@@ -16,6 +16,7 @@
   - `docs/design-qa-current-info-reference.png`
   - `docs/design-qa-current-info-reference-full.png`
   - `docs/design-qa-heading-icons-removal-request.png`
+  - `docs/design-qa-right-panel-typography-reference.png`
 - implementation screenshots:
   - `docs/design-qa-stage-heading.png`
   - `docs/design-qa-panel-heading.png`
@@ -35,6 +36,8 @@
   - `docs/design-qa-current-info-implementation-full.png`
   - `docs/design-qa-heading-icons-removed.png`
   - `docs/design-qa-heading-icons-removed-full.png`
+  - `docs/design-qa-right-panel-typography.png`
+  - `docs/design-qa-right-panel-typography-full.png`
 - normalized comparison:
   - `docs/design-qa-typography-comparison.png`
   - `docs/design-qa-selector-content-removal-comparison.png`
@@ -43,6 +46,7 @@
   - `docs/design-qa-sidebar-parity-comparison.png`
   - `docs/design-qa-current-info-comparison.png`
   - `docs/design-qa-heading-icons-removal-comparison.png`
+  - `docs/design-qa-right-panel-typography-comparison.png`
 - source project: `材科基晶体结构部分/crystal-structure-lab`
 - implementation project: `材科基二元相图部分/binary-phase-lab`
 - viewport: `1280px` 宽；浏览器设备像素比为 `2`
@@ -135,7 +139,7 @@
 | 辅助显示开关 | 晶体结构 `14px` | `14px` |
 | 当前信息名称与数值 | 晶体结构 `15px / 1.45` | `15px / 1.45` |
 | 相平衡说明/相名称 | `13px / 15px` | `13px / 15px` |
-| 普通反应标题/说明 | `14px / 13px` | `14px / 13px` |
+| 普通反应首行/说明 | 晶体结构教学正文 `15px / 1.9` | `15px / 1.9` |
 | 教学解析正文 | 晶体结构 `15px / 1.9` | `15px / 1.9` |
 
 相图选择区按产品标注移除了两类装饰内容：
@@ -168,6 +172,7 @@
 12. 侧栏密度严格统一：将选择卡片由 `49px` 调整为 `56px`、卡片间距由 `5px` 调整为 `8px`；将功能模块标题由 `18px` 调整为 `17px`、模块行由 `40px` 调整为 `54px`、图标由 `18px` 调整为 `22px`，并同步列表内边距、图文间距、行内边距、圆角与阴影。`1280 × 720` 同视口计算值逐项一致；切换 Pb–Sn 与“冷却过程”正常，控制台无 error/warning、页面无横向溢出。
 13. 当前信息卡严格统一：删除标题前 `info` 图标，内容区由 `38% / 9px 17px 13px / 35px` 调整为晶体结构的 `45% / 18px 24px 25px / 53px`，同步标签与数值颜色、字重和中文冒号。默认 Cu–Ni 与最长文案 Fe–Fe₃C 状态均无截断、无横向溢出，控制台无 error/warning。
 14. 左侧标题图标收尾：按产品标注删除“实验参数”前的 `settings` 图标和“辅助显示”前的 `info` 图标；标题文字、`17px / 800 / 54px` 层级、标题栏内边距与下方控件保持不变。
+15. 右栏业务卡片收尾：删除“相平衡”“反应信息”“教学解析”标题前的 SVG 图标；浏览器确认右栏四个 `.card-title` 的 `svgCount` 均为 `0`，标题继续保持 `17px / 800 / 54px / 0 20px`。反应信息与教学解析内容区统一采用晶体结构教学卡的 `22px 24px 0` 内边距、`22px` 卡片底部留白、`#d8e4f2` 文字色与 `15px / 1.9` 正文层级；三相反应激活时的 `18px` 公式强调继续保留。`1440 × 900` 实测无横向溢出，右栏滚动后所有正文完整可见。
 
 ## Findings
 
