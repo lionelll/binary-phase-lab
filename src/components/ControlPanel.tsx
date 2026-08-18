@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
-import { ChartNoAxesCombined, ChartSpline, GitMerge, Network, type LucideIcon } from 'lucide-react';
+import { ChartSpline } from 'lucide-react';
 import { diagrams, type DiagramId, type ModuleId, type PhaseDiagramDefinition } from '../data';
 import { formatNumericValue, parseCommittedNumber } from '../lib/numericInput';
 import { Icon, type IconName } from './Icons';
 
-export interface DisplayOptions { labels: boolean; keyPoints: boolean; tieLine: boolean }
+export interface DisplayOptions { labels: boolean; constituents: boolean; keyPoints: boolean; tieLine: boolean }
 
 interface Props {
   diagram: PhaseDiagramDefinition;
@@ -17,6 +17,7 @@ interface Props {
   onComposition: (value: number) => void;
   onTemperature: (value: number) => void;
   onDisplay: (display: DisplayOptions) => void;
+  onPreset: (composition: number, temperature: number) => void;
   onManualChange: () => void;
 }
 
@@ -25,14 +26,8 @@ const modules: Array<{ id: ModuleId; label: string; icon: IconName }> = [
   { id: 'cooling', label: '冷却过程', icon: 'cooling' },
   { id: 'lever', label: '杠杆定律', icon: 'lever' },
   { id: 'invariant', label: '三相反应', icon: 'reaction' },
+  { id: 'microstructure', label: '金相显微组织', icon: 'micro' },
 ];
-
-const diagramIcons: Record<DiagramId, LucideIcon> = {
-  'cu-ni': ChartSpline,
-  'pt-ag': GitMerge,
-  'pb-sn': ChartNoAxesCombined,
-  'fe-c': Network,
-};
 
 function number(value: number, max: number) { return formatNumericValue(value, max); }
 
@@ -61,13 +56,12 @@ export function ControlPanel(props: Props) {
     <section className="panel selection-panel">
       <div className="panel-heading"><span>相图类型</span></div>
       <div className="diagram-list">
-        {diagrams.map((item) => {
-          const DiagramIcon = diagramIcons[item.id];
-          return <button className={`diagram-card ${item.id === diagram.id ? 'active' : ''}`} type="button" key={item.id} onClick={() => props.onDiagram(item.id)}>
-            <DiagramIcon aria-hidden="true"/>
+        {diagrams.map((item) => (
+          <button className={`diagram-card ${item.id === diagram.id ? 'active' : ''}`} type="button" key={item.id} onClick={() => props.onDiagram(item.id)}>
+            <ChartSpline aria-hidden="true"/>
             <strong>{item.shortTitle}</strong>
-          </button>;
-        })}
+          </button>
+        ))}
       </div>
     </section>
     <section className="panel module-panel">
@@ -82,7 +76,20 @@ export function ControlPanel(props: Props) {
       </div>
     </section>
     <section className="panel display-panel"><div className="panel-heading"><span>辅助显示</span></div><div className="switch-list">
-      {([['labels','相区标签'],['keyPoints','关键点标注'],['tieLine','等温线与交点']] as const).map(([key,label])=><label className="toggle-row" key={key}><input type="checkbox" checked={props.display[key]} onChange={(event)=>props.onDisplay({...props.display,[key]:event.target.checked})}/><span className="fake-check"/><span>{label}</span></label>)}
+      {(([['labels','相区标签'],...(diagram.constituents ? [['constituents','组织标注'] as const] : []),['keyPoints','关键点标注'],['tieLine','等温线与交点']]) as ReadonlyArray<readonly [keyof DisplayOptions, string]>).map(([key,label])=><label className="toggle-row" key={key}><input type="checkbox" checked={props.display[key]} onChange={(event)=>{
+        const checked = event.target.checked;
+        // 相标注与组织标注是同一张图的两种视角，互斥显示。
+        if (key === 'labels') props.onDisplay({ ...props.display, labels: checked, constituents: checked ? false : props.display.constituents });
+        else if (key === 'constituents') props.onDisplay({ ...props.display, constituents: checked, labels: checked ? false : props.display.labels });
+        else props.onDisplay({ ...props.display, [key]: checked });
+      }}/><span className="fake-check"/><span>{label}</span></label>)}
+    {diagram.presets && <div className="preset-block">
+      <span className="preset-title">典型合金预设</span>
+      <div className="preset-list">{diagram.presets.map((preset) => (
+        <button type="button" className="preset-chip" key={preset.id}
+          onClick={() => props.onPreset(preset.composition, preset.temperature)}>{preset.label}</button>
+      ))}</div>
+    </div>}
     </div></section>
   </aside>;
 }

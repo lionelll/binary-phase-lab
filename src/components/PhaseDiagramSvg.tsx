@@ -1,7 +1,7 @@
 import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { ModuleId, PhaseDiagramDefinition, PhaseState, Point } from '../data';
 import { buildRegionPolygon, sampleBoundary, temperatureAt } from '../lib/geometry';
-import { legendPhases, phaseColor, regionColor } from '../lib/phaseColors';
+import { legendPhases, phaseColor, readableInk, regionColor } from '../lib/phaseColors';
 import { isInvariantApplicable } from '../lib/phaseState';
 import type { DisplayOptions } from './ControlPanel';
 
@@ -54,6 +54,13 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
     }
     onManual();
     onChange(composition, temperature);
+  };
+  const jumpTo = (composition: number, temperature: number) => {
+    onManual();
+    onChange(
+      Math.min(diagram.compositionAxis.max, Math.max(diagram.compositionAxis.min, composition)),
+      Math.min(diagram.temperatureAxis.max, Math.max(diagram.temperatureAxis.min, temperature)),
+    );
   };
   const pointerDown = (event: PointerEvent<SVGCircleElement>) => { event.currentTarget.setPointerCapture(event.pointerId); apply(event.clientX, event.clientY); };
   const keyDown = (event: KeyboardEvent<SVGCircleElement>) => {
@@ -154,7 +161,7 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
   return <svg ref={svg} className={`phase-svg diagram-${diagram.id}`} viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="xMidYMid meet" aria-label={`${diagram.title}交互图`}>
     <defs><filter id="pointGlow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
     <rect className="plot-bg" x={M.left} y={M.top} width={W} height={H}/>
-    {diagram.regions.map((region) => <polygon className={`phase-region ${region.id === state.regionId ? 'current' : ''}`} key={region.id} points={poly(buildRegionPolygon(diagram, region), x, y)} fill={regionColor(region.phases)}/>) }
+    {diagram.regions.map((region) => <polygon className={`phase-region ${region.id === state.regionId ? 'current' : ''}`} key={region.id} points={poly(buildRegionPolygon(diagram, region), x, y)} fill={regionColor(region.phases, `${diagram.id}:${region.id}`)}/>) }
     {diagram.invariants.map((reaction) => <line key={reaction.id} className={`invariant-line ${(activeInvariant === reaction.id || module === 'invariant') ? 'active' : ''}`} x1={x(reaction.points.left)} x2={x(reaction.points.right)} y1={y(reaction.temperature)} y2={y(reaction.temperature)}/>) }
     {diagram.boundaries.map((boundary) => <path className={`phase-boundary ${boundary.dashed ? 'dashed' : ''} ${boundary.id === state.boundaryId ? 'active' : ''}`} key={boundary.id} d={path(sampleBoundary(boundary, 80), x, y)}/>) }
 
@@ -167,18 +174,27 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
       })}
     </>}
 
+    {display.constituents && diagram.constituentDividers?.map((divider) => (
+      <line className="constituent-divider" key={`cd-${divider.composition}`} x1={x(divider.composition)} x2={x(divider.composition)} y1={y(divider.from)} y2={y(divider.to)}/>
+    ))}
+    {display.constituents && diagram.constituents?.map((item) => {
+      const anchorX = x(item.anchor[0]), anchorY = y(item.anchor[1]);
+      const textX = anchorX + (item.offset?.dx ?? 0), textY = anchorY + (item.offset?.dy ?? 0);
+      return <g key={item.id}>{item.offset && <line className="region-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className="constituent-label" x={textX} y={textY}>{item.text}</text></g>;
+    })}
     {display.labels && diagram.regions.map((region) => {
       const anchorX = x(region.labelAnchor[0]), anchorY = y(region.labelAnchor[1]);
       const textX = anchorX + (region.labelOffset?.dx ?? 0), textY = anchorY + (region.labelOffset?.dy ?? 0);
-      return <g key={region.id}>{region.labelOffset && <line className="region-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className={`region-label ${region.id === state.regionId ? 'active' : ''}`} x={textX} y={textY}>{region.label}</text></g>;
+      const ink = region.labelOffset ? undefined : readableInk(regionColor(region.phases, `${diagram.id}:${region.id}`));
+      return <g key={region.id}>{region.labelOffset && <line className="region-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className={`region-label ${region.id === state.regionId ? 'active' : ''}`} fill={ink} x={textX} y={textY}>{region.label}</text></g>;
     })}
     {display.labels && diagram.annotations?.map((annotation) => {
       const anchorX = x(annotation.anchor[0]), anchorY = y(annotation.anchor[1]);
       const textX = anchorX + (annotation.offset?.dx ?? 0), textY = anchorY + (annotation.offset?.dy ?? 0);
       return <g key={annotation.id}>{annotation.leader && <line className="annotation-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className="diagram-annotation" x={textX} y={textY}>{annotation.text}</text></g>;
     })}
-    {display.keyPoints && diagram.keyPoints.map((point) => <g className="key-point" key={`${point.label}-${point.composition}`}><circle cx={x(point.composition)} cy={y(point.temperature)} r="3"/>{((point.dx ?? 0) > 10 || Math.abs(point.dy ?? 0) > 20) ? <line className="key-leader" x1={x(point.composition)} y1={y(point.temperature)} x2={x(point.composition) + (point.dx ?? 5) - 3} y2={y(point.temperature) + (point.dy ?? -8) + 3}/> : null}<text x={x(point.composition) + (point.dx ?? 5)} y={y(point.temperature) + (point.dy ?? -8)}>{point.label}</text></g>)}
-    {diagram.invariants.map((reaction) => module === 'invariant' || activeInvariant === reaction.id ? <g className="invariant-points" key={`${reaction.id}-points`}>{[reaction.points.left, reaction.points.middle, reaction.points.right].map((composition, index) => <circle key={composition} cx={x(composition)} cy={y(reaction.temperature)} r={index === 1 ? 6 : 4}/>)}</g> : null)}
+    {display.keyPoints && diagram.keyPoints.map((point) => <g className="key-point" key={`${point.label}-${point.composition}`}><circle className="key-point-hit" cx={x(point.composition)} cy={y(point.temperature)} r="11" tabIndex={0} role="button" aria-label={`跳到关键点 ${point.label}`} onPointerDown={(event) => { event.stopPropagation(); jumpTo(point.composition, point.temperature); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); jumpTo(point.composition, point.temperature); } }}/><circle cx={x(point.composition)} cy={y(point.temperature)} r="3"/>{((point.dx ?? 0) > 10 || Math.abs(point.dy ?? 0) > 20) ? <line className="key-leader" x1={x(point.composition)} y1={y(point.temperature)} x2={x(point.composition) + (point.dx ?? 5) - 3} y2={y(point.temperature) + (point.dy ?? -8) + 3}/> : null}<text x={x(point.composition) + (point.dx ?? 5)} y={y(point.temperature) + (point.dy ?? -8)}>{point.label}</text></g>)}
+    {diagram.invariants.map((reaction) => module === 'invariant' || activeInvariant === reaction.id ? <g className="invariant-points" key={`${reaction.id}-points`}>{[reaction.points.left, reaction.points.middle, reaction.points.right].map((composition, index) => <g key={composition}><circle className="key-point-hit" cx={x(composition)} cy={y(reaction.temperature)} r="11" tabIndex={0} role="button" aria-label={`跳到 ${reaction.equation} 的 ${composition}% 特征点`} onPointerDown={(event) => { event.stopPropagation(); jumpTo(composition, reaction.temperature); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); jumpTo(composition, reaction.temperature); } }}/><circle cx={x(composition)} cy={y(reaction.temperature)} r={index === 1 ? 6 : 4}/></g>)}</g> : null)}
 
     <g className="phase-legend">{phases.map((phase, index) => <g key={phase} transform={`translate(${M.left + index * 67} 27)`}><rect width="15" height="11" rx="2" fill={phaseColor(phase)}/><text x="20" y="10">{phase}</text></g>)}</g>
     <g className="axis"><line x1={M.left} y1={M.top} x2={M.left} y2={M.top + H}/><line x1={M.left} y1={M.top + H} x2={M.left + W} y2={M.top + H}/>

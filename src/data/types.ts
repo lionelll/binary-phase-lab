@@ -1,5 +1,5 @@
 export type DiagramId = 'cu-ni' | 'pt-ag' | 'pb-sn' | 'fe-c';
-export type ModuleId = 'structure' | 'cooling' | 'lever' | 'invariant';
+export type ModuleId = 'structure' | 'cooling' | 'lever' | 'invariant' | 'microstructure';
 
 export type ControlPoint = readonly [composition: number, temperature: number];
 
@@ -77,6 +77,30 @@ export interface InvariantReaction {
   teaching: string;
 }
 
+/** 组织组成物标注（金相形貌视角）。与相标注互斥显示。 */
+export interface ConstituentLabel {
+  id: string;
+  text: string;
+  anchor: ControlPoint;
+  /** SVG viewBox units；用于窄区外置，配合引线。 */
+  offset?: { dx: number; dy: number };
+}
+
+/** 组织视角下的成分分界线，例如 wC = 0.77 / 2.11 / 4.30 处。 */
+export interface ConstituentDivider {
+  composition: number;
+  from: number;
+  to: number;
+}
+
+/** 典型合金预设：一键把状态点送到有教学意义的成分与温度。 */
+export interface AlloyPreset {
+  id: string;
+  label: string;
+  composition: number;
+  temperature: number;
+}
+
 export interface AxisDefinition {
   min: number;
   max: number;
@@ -105,6 +129,10 @@ export interface PhaseDiagramDefinition {
   invariants: InvariantReaction[];
   keyPoints: KeyPoint[];
   annotations?: DiagramAnnotation[];
+  /** 组织组成物标注；缺省表示该相图不提供金相形貌视角。 */
+  constituents?: ConstituentLabel[];
+  constituentDividers?: ConstituentDivider[];
+  presets?: AlloyPreset[];
   defaultState: { composition: number; temperature: number };
   teaching: { overview: string };
 }

@@ -21,5 +21,11 @@ export const pbSn: PhaseDiagramDefinition = {
   ],
   invariants:[{id:'eutectic',type:'eutectic',temperature:183,equation:'L → α + β',points:{left:19,middle:61.9,right:97.5},phaseCompositions:[{phase:'α',composition:19},{phase:'L',composition:61.9},{phase:'β',composition:97.5}],teaching:'在 183℃，61.9% Sn 的液相同时转变为 19% Sn 的 α 相和 97.5% Sn 的 β 相。'}],
   keyPoints:[{label:'C 19%',composition:19,temperature:183,dy:-10},{label:'E 61.9%',composition:61.9,temperature:183,dy:22},{label:'D 97.5%',composition:97.5,temperature:183,dx:-46,dy:-8}],
+  presets:[
+    {id:'p-alpha',label:'单相 α 铅基合金（5% Sn）',composition:5,temperature:150},
+    {id:'p-hypo',label:'亚共晶合金（30% Sn）',composition:30,temperature:120},
+    {id:'p-eutectic',label:'共晶焊料（61.9% Sn）',composition:61.9,temperature:120},
+    {id:'p-hyper',label:'过共晶合金（80% Sn）',composition:80,temperature:120},
+  ],
   defaultState:{composition:40,temperature:230}, teaching:{overview:'Pb–Sn 是典型共晶体系，液相在共晶温度同时生成两种固相。'},
 };

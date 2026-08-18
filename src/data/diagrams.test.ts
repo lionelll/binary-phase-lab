@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { diagrams, feC, pbSn, ptAg } from '.';
-import { buildRegionPolygon, compositionsAt, distanceToRegionOutline, pointInPolygon, regionAt, sampleBoundary } from '../lib/geometry';
+import { cuNi, diagrams, feC, pbSn, ptAg } from '.';
+import { buildRegionPolygon, compositionsAt, distanceToRegionOutline, pointInPolygon, regionAt, sampleBoundary, temperatureAt } from '../lib/geometry';
 import { evaluatePhaseState } from '../lib/phaseState';
 
 describe('phase diagram catalog', () => {
@@ -66,6 +66,29 @@ describe('phase diagram catalog', () => {
         const declared = boundary.phases.map((phase) => phase.replace(/\+/g, ' + ')).sort().join(' | ');
         expect([...seen], `${diagram.id}/${boundary.id} 声明 [${declared}]`).toContain(declared);
       }
+    }
+  });
+
+  it('keeps the Cu-Ni lens smooth: liquidus strictly convex, solidus strictly concave', () => {
+    // 控制点斜率必须严格单调，否则曲率会在某段反向，渲染出可见的折弯。
+    const slopes = (id: string) => {
+      const points = cuNi.boundaries.find((item) => item.id === id)!.points;
+      return points.slice(1).map((point, index) => (point[1] - points[index][1]) / (point[0] - points[index][0]));
+    };
+    const liquidus = slopes('liquidus');
+    liquidus.forEach((value, index) => {
+      if (index > 0) expect(value, `液相线斜率应严格递减，第 ${index} 段`).toBeLessThan(liquidus[index - 1]);
+    });
+    const solidus = slopes('solidus');
+    solidus.forEach((value, index) => {
+      if (index > 0) expect(value, `固相线斜率应严格递增，第 ${index} 段`).toBeGreaterThan(solidus[index - 1]);
+    });
+    // 透镜必须闭合于两纯组元端点，且中间处处张开
+    for (let index = 1; index < 200; index += 1) {
+      const composition = 100 * index / 200;
+      const gap = temperatureAt(cuNi.boundaries.find((item) => item.id === 'liquidus')!, composition)!
+        - temperatureAt(cuNi.boundaries.find((item) => item.id === 'solidus')!, composition)!;
+      expect(gap, `wNi=${composition}% 处液相线未高于固相线`).toBeGreaterThan(0);
     }
   });
 

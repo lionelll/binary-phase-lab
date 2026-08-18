@@ -1,16 +1,16 @@
 import type { PhaseDiagramDefinition } from './types';
 
 export const feC: PhaseDiagramDefinition = {
-  id:'fe-c', title:'Fe–Fe₃C 铁碳相图', shortTitle:'Fe–Fe₃C 铁碳', systemType:'亚稳铁–渗碳体教学相图', components:{left:'Fe',right:'Fe₃C'},
+  id:'fe-c', title:'Fe–Fe₃C 铁碳相图', shortTitle:'Fe–Fe₃C 铁碳', systemType:'铁碳相图', components:{left:'Fe',right:'Fe₃C'},
   compositionAxis:{min:0,max:6.69,ticks:[0,0.77,2.11,4.3,6.69],label:'wC / %'}, temperatureAxis:{min:600,max:1600,ticks:[600,727,912,1148,1394,1495,1600],label:'温度 / ℃'},
   boundaries:[
     {id:'liquidus-delta',kind:'liquidus',phases:['L','L+δ'],points:[[0,1538],[0.25,1518],[0.53,1495]]},
     {id:'delta-solidus',kind:'solidus',phases:['δ','L+δ'],points:[[0,1538],[0.04,1515],[0.09,1495]]},
     {id:'delta-gamma',kind:'phase',phases:['δ','δ+γ'],points:[[0,1394],[0.05,1445],[0.09,1495]]},
     {id:'gamma-delta',kind:'phase',phases:['δ+γ','γ'],points:[[0,1394],[0.08,1430],[0.17,1495]]},
-    {id:'liquidus-gamma',kind:'liquidus',phases:['L','L+γ'],points:[[0.53,1495],[1.2,1405],[2.2,1305],[3.2,1215],[4.3,1148]]},
+    {id:'liquidus-gamma',kind:'liquidus',phases:['L','L+γ'],points:[[0.53,1495],[0.8,1478.3],[1.1,1455.5],[1.4,1430.7],[1.7,1404.6],[2,1377.5],[2.3,1349.6],[2.6,1320.9],[2.9,1291.5],[3.2,1261.6],[3.5,1231.2],[3.8,1200.4],[4.05,1174.3],[4.3,1148]]},
     {id:'gamma-solidus',kind:'solidus',phases:['γ','L+γ'],points:[[0.17,1495],[0.5,1410],[1.1,1300],[1.7,1205],[2.11,1148]]},
-    {id:'liquidus-cementite',kind:'liquidus',phases:['L','L+Fe₃C'],dashed:true,points:[[4.3,1148],[5.1,1170],[5.9,1198],[6.69,1227]]},
+    {id:'liquidus-cementite',kind:'liquidus',phases:['L','L+Fe₃C'],dashed:true,points:[[4.3,1148],[4.6,1161.1],[4.9,1173.5],[5.2,1185.3],[5.5,1196.2],[5.8,1206.2],[6.1,1215],[6.4,1222.4],[6.69,1227]]},
     {id:'a3',kind:'phase',phases:['γ','α+γ'],points:[[0,912],[0.15,870],[0.35,820],[0.55,770],[0.77,727]]},
     {id:'gp',kind:'phase',phases:['α','α+γ'],points:[[0,912],[0.0218,727]]},
     {id:'alpha-solvus',kind:'solvus',phases:['α','α+Fe₃C'],points:[[0.008,600],[0.012,650],[0.0218,727]]},
@@ -41,5 +41,39 @@ export const feC: PhaseDiagramDefinition = {
     {label:'G',composition:0,temperature:912,dx:12,dy:-10},{label:'N',composition:0,temperature:1394,dx:12,dy:18},{label:'P 0.0218',composition:0.0218,temperature:727,dx:14,dy:36},{label:'D 6.69',composition:6.69,temperature:1227,dx:-58,dy:-10},
   ],
   annotations:[{id:'cementite-label',kind:'phase',text:'Fe₃C',anchor:[6.69,880],offset:{dx:-34,dy:0},leader:true}],
+  // 金相形貌视角：组织组成物分区。Ld 为莱氏体、Ld′ 为低温莱氏体，
+  // Fe₃CⅠ/Ⅱ/Ⅲ 分别为一次（自液相）、二次（自奥氏体）、三次（自铁素体）渗碳体。
+  constituentDividers:[
+    {composition:0.77,from:600,to:727},
+    {composition:2.11,from:600,to:1148},
+    {composition:4.3,from:600,to:1148},
+  ],
+  constituents:[
+    {id:'c-liquid',text:'L',anchor:[3.7,1480]},
+    {id:'c-l-delta',text:'L + δ',anchor:[0.25,1505],offset:{dx:55,dy:-21}},
+    {id:'c-delta',text:'δ',anchor:[0.045,1480],offset:{dx:10,dy:-32}},
+    {id:'c-delta-a',text:'δ + A',anchor:[0.12,1470],offset:{dx:72,dy:41}},
+    {id:'c-l-a',text:'L + A',anchor:[1.682,1316]},
+    {id:'c-l-fe3c1',text:'L + Fe₃CⅠ',anchor:[5.77,1159]},
+    {id:'c-austenite',text:'A',anchor:[1.1,1050]},
+    {id:'c-f-a',text:'F + A',anchor:[0.18,800]},
+    {id:'c-a-fe3c2',text:'A + Fe₃CⅡ',anchor:[1.62,800]},
+    {id:'c-a-fe3c2-ld',text:'A + Fe₃CⅡ + Ld',anchor:[3.2,950]},
+    {id:'c-ld-fe3c1',text:'Ld + Fe₃CⅠ',anchor:[5.5,950]},
+    {id:'c-ferrite',text:'F',anchor:[0.01,690],offset:{dx:30,dy:-4}},
+    {id:'c-f-p',text:'F + P',anchor:[0.45,628]},
+    {id:'c-p-fe3c2',text:'P + Fe₃CⅡ',anchor:[1.44,663]},
+    {id:'c-p-fe3c2-ld',text:'P + Fe₃CⅡ + Ld′',anchor:[3.2,663]},
+    {id:'c-ld-fe3c1-low',text:'Ld′ + Fe₃CⅠ',anchor:[5.5,663]},
+  ],
+  presets:[
+    {id:'p-iron',label:'工业纯铁',composition:0.01,temperature:650},
+    {id:'p-hypo-steel',label:'亚共析钢',composition:0.45,temperature:650},
+    {id:'p-eutectoid-steel',label:'共析钢',composition:0.77,temperature:650},
+    {id:'p-hyper-steel',label:'过共析钢',composition:1.2,temperature:650},
+    {id:'p-hypo-iron',label:'亚共晶白口铸铁',composition:3,temperature:650},
+    {id:'p-eutectic-iron',label:'共晶白口铸铁',composition:4.3,temperature:650},
+    {id:'p-hyper-iron',label:'过共晶白口铸铁',composition:5,temperature:650},
+  ],
   defaultState:{composition:1.2,temperature:1250}, teaching:{overview:'Fe–Fe₃C 亚稳相图包含包晶、共晶和共析三类重要反应，是钢铁材料热处理与组织分析的基础。'},
 };
