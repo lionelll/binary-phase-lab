@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { diagrams, feC, pbSn, ptAg } from '.';
-import { buildRegionPolygon, compositionsAt, distanceToRegionOutline, intersectionsAtTemperature, pointInPolygon, regionAt } from '../lib/geometry';
+import { buildRegionPolygon, compositionsAt, distanceToRegionOutline, pointInPolygon, regionAt, sampleBoundary } from '../lib/geometry';
 import { evaluatePhaseState } from '../lib/phaseState';
 
 describe('phase diagram catalog', () => {
@@ -32,11 +32,41 @@ describe('phase diagram catalog', () => {
   it('returns ordered finite isotherm intersections for representative temperatures', () => {
     for (const diagram of diagrams) {
       const temperature = diagram.defaultState.temperature;
-      const intersections = intersectionsAtTemperature(diagram, temperature);
-      expect(intersections.every((item) => Number.isFinite(item.composition))).toBe(true);
-      expect(intersections.map((item) => item.composition)).toEqual([...intersections].map((item) => item.composition).sort((a, b) => a - b));
+      const intersections = diagram.boundaries.flatMap((boundary) => compositionsAt(boundary, temperature));
+      expect(intersections.every((composition) => Number.isFinite(composition))).toBe(true);
+      for (const boundary of diagram.boundaries) {
+        const roots = compositionsAt(boundary, temperature);
+        expect(roots).toEqual([...roots].sort((a, b) => a - b));
+      }
     }
     expect(compositionsAt(pbSn.boundaries.find((item) => item.id === 'liquidus-left')!, 183)[0]).toBeCloseTo(61.9, 4);
+  });
+
+  it('declares boundary phases that match the regions actually lying on either side', () => {
+    for (const diagram of diagrams) {
+      const compositionSpan = diagram.compositionAxis.max - diagram.compositionAxis.min;
+      const temperatureSpan = diagram.temperatureAxis.max - diagram.temperatureAxis.min;
+      for (const boundary of diagram.boundaries) {
+        // 化合物竖线（如 Fe₃C）右侧没有相区，不适用两侧比对。
+        if (boundary.points[0][0] === boundary.points.at(-1)?.[0]) continue;
+        const samples = sampleBoundary(boundary, 60);
+        const seen = new Set<string>();
+        for (let index = 2; index < samples.length - 2; index += 1) {
+          const here = samples[index], next = samples[index + 1];
+          const dx = (next.x - here.x) / compositionSpan, dy = (next.y - here.y) / temperatureSpan;
+          const length = Math.hypot(dx, dy);
+          if (!length) continue;
+          for (const epsilon of [.0006, .0012, .0025, .005, .01]) {
+            const nx = -dy / length * epsilon * compositionSpan, ny = dx / length * epsilon * temperatureSpan;
+            const left = regionAt(diagram, here.x + nx, here.y + ny);
+            const right = regionAt(diagram, here.x - nx, here.y - ny);
+            if (left && right && left.id !== right.id) { seen.add([left.label, right.label].sort().join(' | ')); break; }
+          }
+        }
+        const declared = boundary.phases.map((phase) => phase.replace(/\+/g, ' + ')).sort().join(' | ');
+        expect([...seen], `${diagram.id}/${boundary.id} 声明 [${declared}]`).toContain(declared);
+      }
+    }
   });
 
   it('keeps every region label anchor inside its own polygon', () => {
@@ -155,6 +185,25 @@ describe('phase diagram catalog', () => {
       expect(state.kind, `${diagram.id}/${boundaryId}@${temperature}`).toBe('boundary');
       expect(state.boundaryId).toBe(boundaryId);
       expect(state.teaching).toContain('位于相界上');
+    }
+  });
+
+  it('resolves a real region on every plot edge, including the four corners', () => {
+    // 相区多边形外沿与坐标轴上下限重合，边上的点若判不出相区会显示「图外状态」。
+    for (const diagram of diagrams) {
+      const cs = diagram.compositionAxis, ts = diagram.temperatureAxis;
+      for (let index = 0; index <= 60; index += 1) {
+        const composition = cs.min + (cs.max - cs.min) * index / 60;
+        const temperature = ts.min + (ts.max - ts.min) * index / 60;
+        const probes: Array<[number, number]> = [
+          [composition, ts.max], [composition, ts.min], [cs.min, temperature], [cs.max, temperature],
+        ];
+        for (const [c, t] of probes) {
+          const state = evaluatePhaseState(diagram, c, t);
+          expect(state.regionLabel, `${diagram.id} (${c}, ${t})`).not.toBe('图外状态');
+          expect(state.phases, `${diagram.id} (${c}, ${t})`).not.toEqual(['—']);
+        }
+      }
     }
   });
 

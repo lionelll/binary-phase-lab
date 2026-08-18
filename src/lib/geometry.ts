@@ -1,5 +1,4 @@
 import type {
-  BoundaryIntersection,
   PhaseBoundary,
   PhaseDiagramDefinition,
   PhaseRegion,
@@ -157,16 +156,6 @@ export function regionWidthAt(
   }
   if (crossings.length < 2) return 0;
   return Math.max(...crossings) - Math.min(...crossings);
-}
-
-export function intersectionsAtTemperature(
-  diagram: PhaseDiagramDefinition,
-  temperature: number,
-): BoundaryIntersection[] {
-  const intersections = diagram.boundaries.flatMap((boundary) =>
-    compositionsAt(boundary, temperature).map((composition) => ({ boundaryId: boundary.id, composition })),
-  );
-  return intersections.sort((a, b) => a.composition - b.composition);
 }
 
 export function distanceToBoundary(

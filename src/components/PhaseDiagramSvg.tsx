@@ -1,4 +1,4 @@
-import { useMemo, useRef, type KeyboardEvent, type PointerEvent } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { ModuleId, PhaseDiagramDefinition, PhaseState, Point } from '../data';
 import { buildRegionPolygon, sampleBoundary, temperatureAt } from '../lib/geometry';
 import { legendPhases, phaseColor, regionColor } from '../lib/phaseColors';
@@ -88,6 +88,68 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
     return nodes.filter((node, index) => index === 0 || Math.abs(node.temperature - nodes[index - 1].temperature) > .3);
   }, [diagram, state.composition]);
   const passedNodes = coolingNodes.filter((node) => node.temperature <= coolingStart + .01 && node.temperature >= state.temperature - .01);
+  // 节点文字先沿垂直方向粗排，保证相邻标注不互相压住（节点已按温度降序，故 y 单调递增）。
+  const NODE_LABEL_GAP = 15;
+  const rightSide = state.composition > (diagram.compositionAxis.min + diagram.compositionAxis.max) / 2;
+  let lastLabelY = Number.NEGATIVE_INFINITY;
+  const placedNodes = passedNodes.map((node) => {
+    const anchorY = y(node.temperature);
+    let labelY = anchorY - 7;
+    if (labelY - lastLabelY < NODE_LABEL_GAP) labelY = lastLabelY + NODE_LABEL_GAP;
+    labelY = Math.min(M.top + H - 4, Math.max(M.top + 10, labelY));
+    lastLabelY = labelY;
+    return { ...node, anchorY, labelY };
+  });
+
+  // 渲染后实测：把仍与静态标注（相区标签 / 关键点 / 注记）相撞的节点文字挪开。
+  // 估算字宽在两轮实践中都对不上真实渲染，所以这里一律用 getBBox 实测。
+  const [nodeShift, setNodeShift] = useState<Record<string, { dx: number; dy: number; flip: boolean }>>({});
+  const layoutKey = `${diagram.id}|${module}|${state.composition.toFixed(4)}|${state.temperature.toFixed(1)}|${coolingStart.toFixed(1)}|${display.labels}|${display.keyPoints}`;
+  const settledKey = useRef('');
+  useLayoutEffect(() => {
+    const node = svg.current;
+    if (!node || module !== 'cooling') { settledKey.current = layoutKey; return; }
+    if (settledKey.current === layoutKey) return;
+    const rect = (el: Element) => { const b = (el as SVGGraphicsElement).getBBox(); return { l: b.x, r: b.x + b.width, t: b.y, b: b.y + b.height }; };
+    const overlaps = (a: ReturnType<typeof rect>, c: ReturnType<typeof rect>) => a.l < c.r + 1 && a.r + 1 > c.l && a.t < c.b + 1 && a.b + 1 > c.t;
+    const statics = [...node.querySelectorAll('.region-label, .key-point text, .diagram-annotation, .equilibrium-point text, .axis text')].map(rect);
+    const placed: ReturnType<typeof rect>[] = [];
+    const next: Record<string, { dx: number; dy: number; flip: boolean }> = {};
+    let changed = false;
+    for (const label of node.querySelectorAll<SVGTextElement>('.cooling-node text')) {
+      const id = label.dataset.nodeId ?? '';
+      const base = rect(label);
+      const prev = nodeShift[id] ?? { dx: 0, dy: 0, flip: false };
+      // 先还原到未偏移状态，再重新求解，避免偏移逐轮累积。
+      const width = base.r - base.l;
+      const raw = { l: base.l - prev.dx, r: base.r - prev.dx, t: base.t - prev.dy, b: base.b - prev.dy };
+      const rawFlipped = prev.flip ? { l: raw.l + width + 18, r: raw.r + width + 18, t: raw.t, b: raw.b } : raw;
+      // 候选位移按"离原位最近"排序：先原位，再同侧平移/上下错开，最后才考虑换边。
+      const candidates: Array<{ dx: number; dy: number; flip: boolean }> = [];
+      const steps = [0, 16, 32, 48, 64, 80, 96];
+      const rows = [0, 14, -14, 28, -28, 42, -42, 56, -56];
+      for (const flip of [false, true]) {
+        for (const dy of rows) for (const step of steps) {
+          candidates.push({ dx: flip === rightSide ? step : -step, dy, flip });
+        }
+      }
+      candidates.sort((a, b) => (Math.hypot(a.dx, a.dy) + (a.flip ? 40 : 0)) - (Math.hypot(b.dx, b.dy) + (b.flip ? 40 : 0)));
+      let chosen = candidates[candidates.length - 1];
+      for (const c of candidates) {
+        const w = rawFlipped.r - rawFlipped.l;
+        const shift = c.flip ? (rightSide ? w + 18 : -(w + 18)) : 0;
+        const box = { l: rawFlipped.l + c.dx + shift, r: rawFlipped.r + c.dx + shift, t: rawFlipped.t + c.dy, b: rawFlipped.b + c.dy };
+        if (box.l < M.left + 2 || box.r > M.left + W - 2) continue;
+        if (statics.some((sbox) => overlaps(box, sbox))) continue;
+        if (placed.some((pbox) => overlaps(box, pbox))) continue;
+        chosen = c; placed.push(box); break;
+      }
+      next[id] = chosen;
+      if (chosen.dx !== prev.dx || chosen.dy !== prev.dy || chosen.flip !== prev.flip) changed = true;
+    }
+    settledKey.current = layoutKey;
+    if (changed) setNodeShift(next);
+  });
 
   return <svg ref={svg} className={`phase-svg diagram-${diagram.id}`} viewBox={`0 0 ${VIEW_W} ${VIEW_H}`} preserveAspectRatio="xMidYMid meet" aria-label={`${diagram.title}交互图`}>
     <defs><filter id="pointGlow"><feGaussianBlur stdDeviation="3" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
@@ -98,9 +160,10 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
 
     {module === 'cooling' && <>
       <line className="cooling-track" x1={x(state.composition)} x2={x(state.composition)} y1={y(coolingStart)} y2={y(state.temperature)}/>
-      {passedNodes.map((node, index) => {
-        const rightSide = state.composition > (diagram.compositionAxis.min + diagram.compositionAxis.max) / 2;
-        return <g className="cooling-node" key={node.id}><circle cx={x(state.composition)} cy={y(node.temperature)} r={node.invariant ? 6 : 4}/><text textAnchor={rightSide?'end':'start'} x={x(state.composition) + (rightSide?-9:9)} y={y(node.temperature) + (index % 2 ? 13 : -7)}>{node.temperature.toFixed(0)}℃{node.invariant?` · ${node.label}`:''}</text></g>;
+      {placedNodes.map((node) => {
+        const shift = nodeShift[node.id] ?? { dx: 0, dy: 0, flip: false };
+        const side = shift.flip ? !rightSide : rightSide;
+        return <g className="cooling-node" key={node.id}><circle cx={x(state.composition)} cy={node.anchorY} r={node.invariant ? 6 : 4}/><text data-node-id={node.id} textAnchor={side?'end':'start'} x={x(state.composition) + (side?-9:9) + shift.dx} y={node.labelY + shift.dy}>{node.temperature.toFixed(0)}℃{node.invariant?` · ${node.label}`:''}</text></g>;
       })}
     </>}
 
@@ -124,7 +187,12 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
       <text className="axis-title" x={M.left + W / 2} y={VIEW_H - 18}>{diagram.compositionAxis.label}</text><text className="axis-title y-title" transform={`translate(25 ${M.top + H / 2}) rotate(-90)`}>{diagram.temperatureAxis.label}</text><text className="component left" x={M.left} y={M.top + H + 50}>{diagram.components.left}</text><text className="component right" x={M.left + W} y={M.top + H + 50}>{diagram.components.right}</text>
     </g>
     <line className="composition-guide" x1={x(state.composition)} x2={x(state.composition)} y1={M.top} y2={M.top + H}/>
-    {display.tieLine && tie.length === 2 && <><line className="tie-line" x1={x(tie[0])} x2={x(tie[1])} y1={y(state.temperature)} y2={y(state.temperature)}/>{module === 'lever' && <><line className="lever-arm left" x1={x(tie[0])} x2={x(state.composition)} y1={y(state.temperature)} y2={y(state.temperature)}/><line className="lever-arm right" x1={x(state.composition)} x2={x(tie[1])} y1={y(state.temperature)} y2={y(state.temperature)}/></>}{tie.map((composition, index) => <g className="equilibrium-point" key={`${composition}-${index}`}><circle cx={x(composition)} cy={y(state.temperature)} r="6"/><text x={x(composition)} y={y(state.temperature) - 12}>{composition.toFixed(diagram.compositionAxis.max <= 10 ? 3 : 1)}%</text></g>)}</>}
+    {display.tieLine && tie.length === 2 && <><line className="tie-line" x1={x(tie[0])} x2={x(tie[1])} y1={y(state.temperature)} y2={y(state.temperature)}/>{module === 'lever' && <><line className="lever-arm left" x1={x(tie[0])} x2={x(state.composition)} y1={y(state.temperature)} y2={y(state.temperature)}/><line className="lever-arm right" x1={x(state.composition)} x2={x(tie[1])} y1={y(state.temperature)} y2={y(state.temperature)}/></>}{tie.map((composition, index) => {
+      // 交点贴近绘图区左右边缘时，成分标注改为向内对齐，避免压住纵轴刻度。
+      const px = x(composition);
+      const nearLeft = px < M.left + 26, nearRight = px > M.left + W - 26;
+      return <g className="equilibrium-point" key={`${composition}-${index}`}><circle cx={px} cy={y(state.temperature)} r="6"/><text textAnchor={nearLeft ? 'start' : nearRight ? 'end' : 'middle'} x={nearLeft ? M.left + 6 : nearRight ? M.left + W - 6 : px} y={y(state.temperature) - 12}>{composition.toFixed(diagram.compositionAxis.max <= 10 ? 3 : 1)}%</text></g>;
+    })}</>}
     <circle className="state-point-hit" tabIndex={0} role="slider" aria-label="当前相图温度与成分状态点" aria-valuemin={diagram.temperatureAxis.min} aria-valuemax={diagram.temperatureAxis.max} aria-valuenow={state.temperature} aria-valuetext={`${state.composition.toFixed(3)}%, ${state.temperature.toFixed(0)}℃`} cx={x(state.composition)} cy={y(state.temperature)} r="18" onPointerDown={pointerDown} onPointerMove={(event) => { if (event.currentTarget.hasPointerCapture(event.pointerId)) apply(event.clientX, event.clientY); }} onKeyDown={keyDown}/><circle className="state-point" cx={x(state.composition)} cy={y(state.temperature)} r="7"/>
   </svg>;
 }

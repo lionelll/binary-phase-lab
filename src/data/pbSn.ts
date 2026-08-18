@@ -20,6 +20,6 @@ export const pbSn: PhaseDiagramDefinition = {
     {id:'alpha-beta',label:'α + β',phases:['α','β'],labelAnchor:[58,80],teaching:'共晶温度以下 α 与 β 两相共存，比例由两端溶解度和总体成分决定。',tieLine:{left:{phase:'α',boundaryId:'alpha-solvus'},right:{phase:'β',boundaryId:'beta-solvus'}},outline:[{type:'boundary',boundaryId:'alpha-solvus'},{type:'line',points:[[19,183],[97.5,183]]},{type:'boundary',boundaryId:'beta-solvus'},{type:'line',points:[[99,0],[2,0]]}]},
   ],
   invariants:[{id:'eutectic',type:'eutectic',temperature:183,equation:'L → α + β',points:{left:19,middle:61.9,right:97.5},phaseCompositions:[{phase:'α',composition:19},{phase:'L',composition:61.9},{phase:'β',composition:97.5}],teaching:'在 183℃，61.9% Sn 的液相同时转变为 19% Sn 的 α 相和 97.5% Sn 的 β 相。'}],
-  keyPoints:[{label:'C 19%',composition:19,temperature:183,dy:-10},{label:'E 61.9%',composition:61.9,temperature:183,dy:22},{label:'D 97.5%',composition:97.5,temperature:183,dx:-42,dy:-10}],
+  keyPoints:[{label:'C 19%',composition:19,temperature:183,dy:-10},{label:'E 61.9%',composition:61.9,temperature:183,dy:22},{label:'D 97.5%',composition:97.5,temperature:183,dx:-46,dy:-8}],
   defaultState:{composition:40,temperature:230}, teaching:{overview:'Pb–Sn 是典型共晶体系，液相在共晶温度同时生成两种固相。'},
 };

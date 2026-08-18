@@ -69,7 +69,18 @@ export function evaluatePhaseState(
   const nearestBoundary = diagram.boundaries.find(
     (item) => distanceToBoundary(item, safeComposition, safeTemperature, compositionScale, temperatureScale) < BOUNDARY_TOLERANCE,
   ) ?? null;
-  const region = regionAt(diagram, safeComposition, safeTemperature);
+  let region = regionAt(diagram, safeComposition, safeTemperature);
+  if (!region) {
+    // 相区多边形的外沿与坐标轴上下限完全重合，点正好落在边上时 pointInPolygon 判否。
+    // 仅在首次查找失败时向绘图区内微移后重试，不影响内部任何判定。
+    const insetComposition = compositionScale * 1e-4;
+    const insetTemperature = temperatureScale * 1e-4;
+    region = regionAt(
+      diagram,
+      Math.min(diagram.compositionAxis.max - insetComposition, Math.max(diagram.compositionAxis.min + insetComposition, safeComposition)),
+      Math.min(diagram.temperatureAxis.max - insetTemperature, Math.max(diagram.temperatureAxis.min + insetTemperature, safeTemperature)),
+    );
+  }
   // 相区本身比容差还窄时（如 Fe-C 的 α 细条，总宽 0.0218% C），区内每一点都会落在容差里，
   // 不能据此判为"位于相界上"，否则单相区会被讲成临界态。
   const regionNarrowerThanTolerance = Boolean(

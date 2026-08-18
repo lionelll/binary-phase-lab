@@ -35,7 +35,7 @@ export const cuNi: PhaseDiagramDefinition = {
   ],
   invariants: [],
   keyPoints: [
-    { label: 'Cu 1085℃', composition: 0, temperature: 1085, dx: 8, dy: -10 },
+    { label: 'Cu 1085℃', composition: 0, temperature: 1085, dx: 22, dy: 7 },
     { label: 'Ni 1455℃', composition: 100, temperature: 1455, dx: -72, dy: -10 },
   ],
   defaultState: { composition: 40, temperature: 1260 },
