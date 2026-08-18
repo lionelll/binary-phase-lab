@@ -31,3 +31,7 @@ npm run build
 
 返回首页地址可通过 `VITE_PORTAL_URL` 配置，默认指向材料项目测试入口页。
 正式上线前必须由产品所有者确认并替换该入口地址；本项目当前不包含部署配置。
+
+## 界面一致性
+
+顶部品牌栏、三栏比例、中央标题栏和响应式缩放规则统一记录在 [`docs/ui-master-control.md`](docs/ui-master-control.md)。修改这些共享尺寸时，应优先调整 `src/styles.css` 末尾的主控变量，并以晶体结构实验室为视觉基准复核。

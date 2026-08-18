@@ -141,6 +141,24 @@ export function regionAt(
   return diagram.regions.find((region) => pointInPolygon({ x: composition, y: temperature }, buildRegionPolygon(diagram, region))) ?? null;
 }
 
+/** 相区在给定温度下的成分跨度。用于识别比判定容差还窄的细长相区。 */
+export function regionWidthAt(
+  diagram: PhaseDiagramDefinition,
+  region: PhaseRegion,
+  temperature: number,
+): number {
+  const polygon = buildRegionPolygon(diagram, region);
+  const crossings: number[] = [];
+  for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current, current += 1) {
+    const a = polygon[current];
+    const b = polygon[previous];
+    if (a.y > temperature === b.y > temperature) continue;
+    crossings.push(((b.x - a.x) * (temperature - a.y)) / (b.y - a.y) + a.x);
+  }
+  if (crossings.length < 2) return 0;
+  return Math.max(...crossings) - Math.min(...crossings);
+}
+
 export function intersectionsAtTemperature(
   diagram: PhaseDiagramDefinition,
   temperature: number,

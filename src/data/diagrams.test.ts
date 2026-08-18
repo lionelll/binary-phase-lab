@@ -139,6 +139,25 @@ describe('phase diagram catalog', () => {
     expect(boundaryState.teaching).toContain('位于相界上');
   });
 
+  it('still reports normal-width single-phase boundaries as boundary states', () => {
+    // 细窄相区的豁免不得波及正常宽度的单相区：站在液相线/固相线/溶解度线上仍应是临界态。
+    const cases = [
+      [diagrams[0], 'solidus', 1300],
+      [diagrams[0], 'liquidus', 1300],
+      [pbSn, 'alpha-solvus', 120],
+      [ptAg, 'alpha-solvus', 1000],
+      [feC, 'a3', 820],
+    ] as const;
+    for (const [diagram, boundaryId, temperature] of cases) {
+      const boundary = diagram.boundaries.find((item) => item.id === boundaryId)!;
+      const composition = compositionsAt(boundary, temperature)[0];
+      const state = evaluatePhaseState(diagram, composition, temperature);
+      expect(state.kind, `${diagram.id}/${boundaryId}@${temperature}`).toBe('boundary');
+      expect(state.boundaryId).toBe(boundaryId);
+      expect(state.teaching).toContain('位于相界上');
+    }
+  });
+
   it('keeps evaluated values finite for boundaries and invalid input', () => {
     for (const diagram of diagrams) {
       for (const [composition, temperature] of [[diagram.compositionAxis.min, diagram.temperatureAxis.min], [diagram.compositionAxis.max, diagram.temperatureAxis.max], [Number.NaN, Number.NaN]]) {

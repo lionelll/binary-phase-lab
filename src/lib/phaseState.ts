@@ -1,11 +1,11 @@
 import type { InvariantReaction, PhaseDiagramDefinition, PhaseState } from '../data/types';
 import { calculatePhaseFractions } from './lever';
-import { compositionsAt, distanceToBoundary, regionAt } from './geometry';
+import { compositionsAt, distanceToBoundary, regionAt, regionWidthAt } from './geometry';
 import { teachingFor } from './teaching';
 
 const INVARIANT_TOLERANCE = 0.25;
-const VISUAL_BOUNDARY_TOLERANCE = 0.0025;
-const SEMANTIC_BOUNDARY_TOLERANCE = 1e-5;
+/** 归一化判定容差，约合 2 个绘图单位。 */
+const BOUNDARY_TOLERANCE = 0.0025;
 
 export function isInvariantApplicable(reaction: InvariantReaction, composition: number): boolean {
   return Number.isFinite(composition) &&
@@ -66,21 +66,16 @@ export function evaluatePhaseState(
 
   const compositionScale = diagram.compositionAxis.max - diagram.compositionAxis.min;
   const temperatureScale = diagram.temperatureAxis.max - diagram.temperatureAxis.min;
-  const visualBoundary = diagram.boundaries.find(
-    (item) => distanceToBoundary(item, safeComposition, safeTemperature, compositionScale, temperatureScale) < VISUAL_BOUNDARY_TOLERANCE,
-  ) ?? null;
-  const semanticBoundary = diagram.boundaries.find((item) =>
-    compositionsAt(item, safeTemperature).some(
-      (boundaryComposition) => Math.abs(boundaryComposition - safeComposition) / compositionScale <= SEMANTIC_BOUNDARY_TOLERANCE,
-    ),
+  const nearestBoundary = diagram.boundaries.find(
+    (item) => distanceToBoundary(item, safeComposition, safeTemperature, compositionScale, temperatureScale) < BOUNDARY_TOLERANCE,
   ) ?? null;
   const region = regionAt(diagram, safeComposition, safeTemperature);
-  const boundaryBelongsToSinglePhaseRegion = Boolean(
-    semanticBoundary &&
-    region?.phases.length === 1 &&
-    region.outline.some((segment) => segment.type === 'boundary' && segment.boundaryId === semanticBoundary.id),
+  // 相区本身比容差还窄时（如 Fe-C 的 α 细条，总宽 0.0218% C），区内每一点都会落在容差里，
+  // 不能据此判为"位于相界上"，否则单相区会被讲成临界态。
+  const regionNarrowerThanTolerance = Boolean(
+    region && regionWidthAt(diagram, region, safeTemperature) / compositionScale < BOUNDARY_TOLERANCE * 2,
   );
-  const isSemanticBoundary = Boolean(semanticBoundary && !boundaryBelongsToSinglePhaseRegion);
+  const isSemanticBoundary = Boolean(nearestBoundary && !regionNarrowerThanTolerance);
 
   if (region?.tieLine) {
     const leftBoundary = diagram.boundaries.find((item) => item.id === region.tieLine?.left.boundaryId);
@@ -101,16 +96,16 @@ export function evaluatePhaseState(
           { phase: leftPhase, composition: orderedLeft, fraction: fractions.left },
           { phase: rightPhase, composition: orderedRight, fraction: fractions.right },
         ],
-        invariant: null, boundaryId: visualBoundary?.id ?? semanticBoundary?.id ?? null, teaching: teachingFor(diagram, region, isSemanticBoundary ? 'boundary' : 'region'),
+        invariant: null, boundaryId: nearestBoundary?.id ?? null, teaching: teachingFor(diagram, region, isSemanticBoundary ? 'boundary' : 'region'),
       };
     }
   }
 
-  const fallbackPhases = region?.phases ?? semanticBoundary?.phases ?? visualBoundary?.phases ?? ['—'];
+  const fallbackPhases = region?.phases ?? nearestBoundary?.phases ?? ['—'];
   return {
     kind: isSemanticBoundary ? 'boundary' : 'region', composition: safeComposition, temperature: safeTemperature,
-    regionId: region?.id ?? null, regionLabel: region?.label ?? semanticBoundary?.phases.join(' / ') ?? visualBoundary?.phases.join(' / ') ?? '图外状态', phases: fallbackPhases,
+    regionId: region?.id ?? null, regionLabel: region?.label ?? nearestBoundary?.phases.join(' / ') ?? '图外状态', phases: fallbackPhases,
     equilibrium: fallbackPhases.slice(0, 1).map((phase) => ({ phase, composition: safeComposition, fraction: 100 })),
-    invariant: null, boundaryId: visualBoundary?.id ?? semanticBoundary?.id ?? null, teaching: teachingFor(diagram, region, isSemanticBoundary ? 'boundary' : 'region'),
+    invariant: null, boundaryId: nearestBoundary?.id ?? null, teaching: teachingFor(diagram, region, isSemanticBoundary ? 'boundary' : 'region'),
   };
 }

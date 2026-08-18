@@ -1,4 +1,4 @@
-export type IconName = 'home' | 'reset' | 'play' | 'pause' | 'diagram' | 'cooling' | 'lever' | 'reaction' | 'info' | 'settings' | 'chevron';
+export type IconName = 'home' | 'reset' | 'play' | 'pause' | 'diagram' | 'cooling' | 'lever' | 'reaction' | 'info' | 'settings';
 
 export function Icon({ name, className }: { name: IconName; className?: string }) {
   const common = { className, width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.8, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true };
@@ -13,7 +13,6 @@ export function Icon({ name, className }: { name: IconName; className?: string }
     reaction: <><path d="M5 7h12l-3-3M19 17H7l3 3"/><circle cx="5" cy="7" r="1"/><circle cx="19" cy="17" r="1"/></>,
     info: <><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7h.01"/></>,
     settings: <><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2" fill="currentColor"/><circle cx="15" cy="12" r="2" fill="currentColor"/><circle cx="11" cy="18" r="2" fill="currentColor"/></>,
-    chevron: <path d="m9 6 6 6-6 6"/>,
   };
   return <svg {...common}>{paths[name]}</svg>;
 }

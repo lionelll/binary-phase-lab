@@ -25,7 +25,6 @@ interface CoolingOptions {
 
 export function useCooling({ diagram, composition, temperature, onTemperature, onInvariant }: CoolingOptions) {
   const [isCooling, setIsCooling] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
   const [runStartTemperature, setRunStartTemperature] = useState<number | null>(null);
   const frame = useRef<number | null>(null);
   const timer = useRef<number | null>(null);
@@ -50,7 +49,6 @@ export function useCooling({ diagram, composition, temperature, onTemperature, o
     sessionRef.current = { ...sessionRef.current, runStartTemperature: null };
     setRunStartTemperature(null);
     setIsCooling(false);
-    setIsPaused(false);
     onInvariant(null);
   }, [cancelSchedules, onInvariant]);
 
@@ -59,16 +57,8 @@ export function useCooling({ diagram, composition, temperature, onTemperature, o
     sessionRef.current = resetCoolingSession();
     setRunStartTemperature(null);
     setIsCooling(false);
-    setIsPaused(false);
     onInvariant(null);
   }, [cancelSchedules, onInvariant]);
-
-  const pause = useCallback(() => {
-    if (!isCooling) return;
-    cancelSchedules();
-    setIsCooling(false);
-    setIsPaused(true);
-  }, [cancelSchedules, isCooling]);
 
   const tick = useCallback((timestamp: number) => {
     const last = previousTime.current ?? timestamp;
@@ -109,7 +99,6 @@ export function useCooling({ diagram, composition, temperature, onTemperature, o
       temperatureRef.current = next;
       onTemperature(next);
       setIsCooling(false);
-      setIsPaused(false);
       onInvariant(null);
       cancelSchedules();
       return;
@@ -129,23 +118,13 @@ export function useCooling({ diagram, composition, temperature, onTemperature, o
     }
     sessionRef.current = startNewCoolingSession(initial);
     setRunStartTemperature(initial);
-    setIsPaused(false);
     setIsCooling(true);
     onInvariant(null);
     frame.current = requestAnimationFrame(tick);
   }, [cancelSchedules, diagram.temperatureAxis.max, diagram.temperatureAxis.min, onInvariant, onTemperature, tick]);
 
-  const resume = useCallback(() => {
-    if (!isPaused) return;
-    cancelSchedules();
-    setIsPaused(false);
-    setIsCooling(true);
-    onInvariant(null);
-    frame.current = requestAnimationFrame(tick);
-  }, [cancelSchedules, isPaused, onInvariant, tick]);
-
   useEffect(() => () => cancelSchedules(), [cancelSchedules]);
   useEffect(() => { reset(); }, [diagram.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { isCooling, isPaused, runStartTemperature, startNewRun, resume, pause, stop, reset };
+  return { isCooling, runStartTemperature, startNewRun, stop, reset };
 }
