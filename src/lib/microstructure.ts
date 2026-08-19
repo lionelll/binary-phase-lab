@@ -1,88 +1,267 @@
 import type { PhaseDiagramDefinition } from '../data/types';
-import { regionAt } from './geometry';
+import { temperatureAt } from './geometry';
 
+/**
+ * 显微组织判定。
+ *
+ * 与相区判定的区别：相区只回答「此处有哪些相」（如 α+β），
+ * 显微组织要回答「按平衡冷却走到这一步，显微镜下看到什么」（如 初生α相 +（α+β）共晶组织）。
+ * 因此必须沿成分垂线模拟冷却路径：液相 → 初生相析出 → 三相反应 → 固态析出 → 最终组织。
+ *
+ * 二次相一律用罗马数字：βⅡ、Fe₃CⅡ。
+ */
 export interface Microstructure {
-  /** 组织类型名称，如「亚共析钢：F + P」。 */
+  /** 冷却阶段 */
+  stage: string;
+  /** 当前显微组织 */
   name: string;
-  /** 显微形态及特征解析。 */
-  morphology: string;
+  /** 组织形成过程 */
+  formation: string;
 }
 
-const EPS = 5e-3;
+/** 判定「正处于三相反应温度」的带宽，取温度轴跨度的 0.4%，使拖动可及。 */
+function reactionBand(diagram: PhaseDiagramDefinition) {
+  return (diagram.temperatureAxis.max - diagram.temperatureAxis.min) * 0.004;
+}
 
-/** Fe–Fe₃C：同一相区内还要按成分再分组织，故单独判定。 */
-function ironCarbon(regionId: string, composition: number): Microstructure | null {
-  switch (regionId) {
-    case 'liquid':
-      return { name: 'L（液相）', morphology: '完全熔融的液态合金，无固定组织形貌。冷却穿过液相线后才开始出现初生固相。' };
-    case 'delta':
-      return { name: 'δ（高温铁素体）', morphology: 'δ 铁素体单相，体心立方结构。高温下晶粒粗大，呈多边形等轴状，晶界平直。' };
-    case 'liquid-delta':
-      return { name: 'L + δ', morphology: '液相中分布着初生 δ 铁素体枝晶。枝晶沿散热方向择优生长，二次枝晶臂随冷却速度减慢而变粗。' };
-    case 'delta-gamma':
-      return { name: 'δ + A', morphology: '包晶反应进行中。新生奥氏体在 δ 铁素体与液相的界面形核，呈壳层状包覆在 δ 枝晶外围，δ 被逐步蚕食。' };
-    case 'liquid-gamma':
-      return { name: 'L + A', morphology: '液相中分布初生奥氏体枝晶。枝晶随温度下降不断长大并富集碳于剩余液相，是形成枝晶偏析的阶段。' };
-    case 'liquid-cementite':
-      return { name: 'L + Fe₃CⅠ', morphology: '液相中析出粗大板条状（针状）一次渗碳体。Fe₃CⅠ 直接从液相长出，尺寸远大于二次、三次渗碳体，浸蚀后呈白亮色。' };
-    case 'gamma':
-      return { name: 'A（奥氏体）', morphology: '单相奥氏体，面心立方结构。呈多边形等轴晶粒，晶界平直，常可见退火孪晶带——这是奥氏体区别于铁素体的典型特征。' };
-    case 'alpha-gamma':
-      return { name: 'F + A', morphology: '先共析铁素体沿奥氏体晶界形核，呈网状或块状包围奥氏体晶粒。随温度下降铁素体量增加、奥氏体含碳量沿 GS 线升高。' };
-    case 'alpha':
-      return { name: 'F（铁素体）', morphology: '单相铁素体，体心立方结构。浸蚀后呈白亮多边形等轴晶粒，碳固溶度极低（727℃ 时仅 0.0218%）。' };
-    case 'gamma-cementite':
-      if (composition < 2.11 - EPS) return { name: 'A + Fe₃CⅡ', morphology: '二次渗碳体自奥氏体中析出，沿奥氏体晶界呈网状分布。含碳量越高，网越连续完整。' };
-      if (composition < 4.3 - EPS) return { name: 'A + Fe₃CⅡ + Ld（亚共晶白口铸铁高温组织）', morphology: '初生奥氏体枝晶 + 沿晶界析出的网状二次渗碳体，二者分布在高温莱氏体基体上。Ld 中奥氏体呈粒状或短棒状嵌于渗碳体基体。' };
-      if (composition < 4.3 + EPS) return { name: 'Ld（高温莱氏体）', morphology: '共晶组织。奥氏体呈粒状、短棒状均匀分布在连续的渗碳体基体上，硬而脆。' };
-      return { name: 'Ld + Fe₃CⅠ（过共晶白口铸铁高温组织）', morphology: '粗大板条状一次渗碳体分布在高温莱氏体基体上。Fe₃CⅠ 尺寸明显大于莱氏体内的渗碳体。' };
-    case 'alpha-cementite':
-      if (composition < 0.0218 - 1e-4) return { name: 'F + Fe₃CⅢ', morphology: '铁素体基体，晶界处析出少量三次渗碳体薄片。Fe₃CⅢ 量极少，通常只在极低碳钢中才可分辨。' };
-      if (composition < 0.77 - EPS) return { name: '亚共析钢：F + P', morphology: '白亮块状先共析铁素体 + 层片状珠光体。含碳量越低铁素体越多；铁素体常沿原奥氏体晶界呈网状或等轴块状分布。' };
-      if (composition < 0.77 + EPS) return { name: '共析钢：P（珠光体）', morphology: '全部为珠光体。铁素体与渗碳体交替呈层片状排列，高倍下呈明暗相间条纹，低倍下因层片过细而呈暗色，形似指纹。' };
-      if (composition < 2.11 - EPS) return { name: '过共析钢：P + Fe₃CⅡ', morphology: '珠光体基体上，二次渗碳体呈白亮网状包围原奥氏体晶界。网状 Fe₃CⅡ 显著降低韧性，生产上需球化退火消除。' };
-      if (composition < 4.3 - EPS) return { name: '亚共晶白口铸铁：P + Fe₃CⅡ + Ld′', morphology: '由初生奥氏体枝晶转变来的珠光体（呈枝晶状黑块）+ 其外围网状二次渗碳体，二者分布在低温莱氏体基体上。' };
-      if (composition < 4.3 + EPS) return { name: '共晶白口铸铁：Ld′（低温莱氏体）', morphology: '珠光体呈黑色粒状或短棒状均匀分布在白亮渗碳体基体上，形似豹纹或斑点。硬度高、脆性大，不能切削加工。' };
-      return { name: '过共晶白口铸铁：Ld′ + Fe₃CⅠ', morphology: '粗大白亮板条状一次渗碳体贯穿视场，其余为低温莱氏体基体。Fe₃CⅠ 是区分过共晶与亚共晶白口铸铁的判据。' };
-    case 'cementite':
-      return { name: 'Fe₃C（渗碳体）', morphology: '正交晶系间隙化合物，含碳 6.69%。硬度极高（约 800HBW）、塑性几乎为零，浸蚀后呈白亮色。' };
-    default:
-      return null;
+const at = (diagram: PhaseDiagramDefinition, id: string, composition: number) =>
+  temperatureAt(diagram.boundaries.find((item) => item.id === id)!, composition);
+
+// ── Cu–Ni 匀晶 ────────────────────────────────────────────────
+function isomorphous(diagram: PhaseDiagramDefinition, c: number, T: number): Microstructure {
+  const liquidus = at(diagram, 'liquidus', c) ?? diagram.temperatureAxis.max;
+  const solidus = at(diagram, 'solidus', c) ?? diagram.temperatureAxis.min;
+  if (T > liquidus) return {
+    stage: '液态', name: '液相 L',
+    formation: `合金完全熔融。冷却到液相线 ${liquidus.toFixed(0)}℃ 时才开始结晶。`,
+  };
+  if (T > solidus) return {
+    stage: '结晶进行中（L → α）', name: 'L + 初生α相',
+    formation: `液相冷至 ${liquidus.toFixed(0)}℃ 开始析出初生 α 固溶体，呈枝晶状长大。液、固两相成分分别沿液相线与固相线变化，先结晶部分富高熔点组元，形成枝晶偏析。`,
+  };
+  return {
+    stage: '凝固完成', name: 'α固溶体（单相）',
+    formation: `冷至固相线 ${solidus.toFixed(0)}℃ 液相耗尽，全部转变为单相 α 置换固溶体。铸态下保留枝晶偏析，需扩散退火消除。`,
+  };
+}
+
+// ── Pb–Sn 共晶 ────────────────────────────────────────────────
+function eutectic(diagram: PhaseDiagramDefinition, c: number, T: number): Microstructure {
+  const inv = diagram.invariants[0];
+  const { left: cAlpha, middle: cE, right: cBeta } = inv.points;
+  const band = reactionBand(diagram);
+  const left = c < cE;
+  const liquidus = at(diagram, left ? 'liquidus-left' : 'liquidus-right', c) ?? diagram.temperatureAxis.max;
+  const solvus = at(diagram, left ? 'alpha-solvus' : 'beta-solvus', c);
+  const primary = left ? 'α' : 'β';
+  const secondary = left ? 'βⅡ' : 'αⅡ';
+  const singlePhase = left ? c < cAlpha : c > cBeta;
+
+  if (T > liquidus) return { stage: '液态', name: '液相 L', formation: `合金完全熔融，冷却到液相线 ${liquidus.toFixed(0)}℃ 才开始结晶。` };
+
+  // 单相固溶体成分：不经历共晶反应
+  if (singlePhase) {
+    const solidus = at(diagram, left ? 'alpha-solidus' : 'beta-solidus', c) ?? inv.temperature;
+    if (T > solidus) return {
+      stage: '结晶进行中', name: `L + 初生${primary}相`,
+      formation: `液相中析出初生 ${primary} 固溶体枝晶，剩余液相成分沿液相线向共晶点富集。`,
+    };
+    if (solvus === null || T > solvus) return {
+      stage: '单相固溶体', name: `${primary}固溶体（单相）`,
+      formation: `液相在 ${solidus.toFixed(0)}℃ 耗尽，得到单相 ${primary} 固溶体。该成分未达共晶点，不发生共晶反应。`,
+    };
+    return {
+      stage: '固态析出', name: `${primary}固溶体 + ${secondary}`,
+      formation: `冷至溶解度线 ${solvus.toFixed(0)}℃ 以下，${primary} 相中溶质过饱和，沿晶界析出二次相 ${secondary}。`,
+    };
   }
+
+  // 共晶成分
+  if (Math.abs(c - cE) < 0.6) {
+    if (T > inv.temperature + band) return { stage: '液态（共晶成分）', name: '液相 L', formation: `共晶成分合金冷却时不析出初生相，直到 ${inv.temperature}℃ 才一次性发生共晶反应。` };
+    if (T > inv.temperature - band) return {
+      stage: '共晶反应阶段', name: '（α+β）共晶组织形成中',
+      formation: `${inv.temperature}℃ 恒温下发生 ${inv.equation}：全部液相同时转变为 α 与 β 两相。反应期间三相共存，温度不变。`,
+    };
+    return { stage: '固态冷却', name: '（α+β）共晶组织', formation: `全部组织为共晶体，α 与 β 交替呈层片状（或棒状）排列，是典型的两相混合物。` };
+  }
+
+  // 亚共晶 / 过共晶
+  const kind = left ? '亚共晶' : '过共晶';
+  if (T > inv.temperature + band) return {
+    stage: '初生相结晶阶段', name: `L + 初生${primary}相`,
+    formation: `${kind}合金。液相冷至 ${liquidus.toFixed(0)}℃ 开始析出初生 ${primary} 枝晶，剩余液相成分沿液相线移向共晶点 ${cE}%。`,
+  };
+  if (T > inv.temperature - band) return {
+    stage: '共晶反应阶段', name: `初生${primary}相 +（α+β）共晶组织`,
+    formation: `温度降至 ${inv.temperature}℃，剩余液相达到共晶成分 ${cE}%，恒温发生 ${inv.equation}。初生 ${primary} 枝晶保留，其余液相转变为共晶体。`,
+  };
+  return {
+    stage: '固态析出', name: `初生${primary}相 +（α+β）共晶组织 + ${secondary}`,
+    formation: `共晶反应结束后继续冷却，初生 ${primary} 相因溶解度沿溶解度线下降而过饱和，析出二次相 ${secondary}。最终组织为初生 ${primary} 枝晶分布在共晶基体上。`,
+  };
 }
 
-/** 其余三套相图按相区给出组织描述。 */
-const GENERIC: Record<string, Record<string, Microstructure>> = {
-  'cu-ni': {
-    liquid: { name: 'L（液相）', morphology: '完全熔融的液态合金，无固定组织形貌。' },
-    'liquid-alpha': { name: 'L + α', morphology: '液相中生长着 α 固溶体枝晶。因固液两相成分始终不同，非平衡冷却时枝晶心部富 Ni、外缘富 Cu，形成枝晶偏析（树枝状组织）。' },
-    alpha: { name: 'α（单相固溶体）', morphology: '单相置换固溶体，呈多边形等轴晶粒。铸态下常保留枝晶偏析痕迹，需扩散退火（均匀化退火）消除。' },
-  },
-  'pt-ag': {
-    liquid: { name: 'L（液相）', morphology: '完全熔融的液态合金，无固定组织形貌。' },
-    alpha: { name: 'α（富 Pt 固溶体）', morphology: '单相 α 固溶体，多边形等轴晶粒。' },
-    'liquid-alpha': { name: 'L + α', morphology: '液相中分布初生 α 固溶体枝晶，冷至包晶温度后 α 将与液相反应生成 β。' },
-    'liquid-beta': { name: 'L + β', morphology: '液相与 β 固溶体共存。包晶反应生成的 β 呈壳层状包覆在 α 外围，阻碍反应继续进行，常留下未反应完的 α 心部。' },
-    beta: { name: 'β（富 Ag 固溶体）', morphology: '单相 β 固溶体，多边形等轴晶粒。' },
-    'alpha-beta': { name: 'α + β', morphology: '两种固溶体共存。包晶产物 β 包裹残余 α，形成典型的「壳心结构」，是包晶组织不平衡的显微标志。' },
-  },
-  'pb-sn': {
-    liquid: { name: 'L（液相）', morphology: '完全熔融的液态合金，无固定组织形貌。' },
-    alpha: { name: 'α（富 Pb 固溶体）', morphology: '单相 α 固溶体，多边形等轴晶粒。' },
-    'liquid-alpha': { name: 'L + α', morphology: '液相中分布初生 α 枝晶（亚共晶合金）。剩余液相成分沿液相线向共晶点富集。' },
-    'liquid-beta': { name: 'L + β', morphology: '液相中分布初生 β 枝晶（过共晶合金）。' },
-    beta: { name: 'β（富 Sn 固溶体）', morphology: '单相 β 固溶体，多边形等轴晶粒。' },
-    'alpha-beta': { name: 'α + β', morphology: '共晶组织为 α 与 β 交替排列的层片状（或棒状）两相混合物；亚共晶合金中还可见初生 α 枝晶分布于共晶基体上，过共晶则为初生 β。' },
-  },
-};
+// ── Pt–Ag 包晶 ────────────────────────────────────────────────
+function peritectic(diagram: PhaseDiagramDefinition, c: number, T: number): Microstructure {
+  const inv = diagram.invariants[0];
+  const { left: cA, middle: cB, right: cL } = inv.points;   // α 10.5 / β 42.4 / L 66.3
+  const band = reactionBand(diagram);
+  const liquidus = at(diagram, c <= cL ? 'liquidus-left' : 'liquidus-right', c) ?? diagram.temperatureAxis.max;
+
+  if (T > liquidus) return { stage: '液态', name: '液相 L', formation: `合金完全熔融，冷却到液相线 ${liquidus.toFixed(0)}℃ 才开始结晶。` };
+
+  if (c < cA) {   // 富 Pt 侧单相 α
+    const solidus = at(diagram, 'alpha-solidus', c) ?? inv.temperature;
+    const solvus = at(diagram, 'alpha-solvus', c);
+    if (T > solidus) return { stage: '结晶进行中', name: 'L + 初生α相', formation: '液相中析出初生 α 固溶体枝晶。该成分位于包晶点左侧，不发生包晶反应。' };
+    if (solvus === null || T > solvus) return { stage: '单相固溶体', name: 'α固溶体（单相）', formation: `液相在 ${solidus.toFixed(0)}℃ 耗尽，得到单相 α 固溶体。` };
+    return { stage: '固态析出', name: 'α固溶体 + βⅡ', formation: `冷至溶解度线 ${solvus.toFixed(0)}℃ 以下，α 过饱和析出二次相 βⅡ。` };
+  }
+
+  if (c > cL) {   // 富 Ag 侧，直接从液相析出 β
+    const solidus = at(diagram, 'beta-solidus', c) ?? inv.temperature;
+    if (T > solidus) return { stage: '结晶进行中', name: 'L + 初生β相', formation: '该成分位于包晶点 C 右侧，液相直接析出初生 β 固溶体，不经历包晶反应。' };
+    return { stage: '凝固完成', name: 'β固溶体（单相）', formation: `液相在 ${solidus.toFixed(0)}℃ 耗尽，得到单相 β 固溶体。` };
+  }
+
+  // cA ≤ c ≤ cL：经历包晶反应
+  if (T > inv.temperature + band) return {
+    stage: '包晶反应前', name: 'L + 初生α相',
+    formation: `液相冷至 ${liquidus.toFixed(0)}℃ 开始析出初生 α 枝晶。继续冷却时液相成分沿液相线移向 C 点 ${cL}%、α 成分移向 D 点 ${cA}%，为 ${inv.temperature}℃ 的包晶反应做准备。`,
+  };
+  if (T > inv.temperature - band) return {
+    stage: '包晶反应阶段', name: 'L + α + β（三相共存）',
+    formation: `${inv.temperature}℃ 恒温发生 ${inv.equation}。新生 β 在 L 与 α 的界面形核，呈壳层状包覆住 α 枝晶，把液相与 α 隔开，反应只能靠原子扩散穿过 β 层继续进行。`,
+  };
+  if (Math.abs(c - cB) < 0.6) return {
+    stage: '包晶反应结束', name: 'β基体组织（单相）',
+    formation: `该成分恰为包晶点 P（${cB}%），L 与 α 恰好完全消耗，全部转变为单相 β。`,
+  };
+  if (c < cB) return {
+    stage: '包晶反应结束', name: '残余α相 + β相',
+    formation: `成分位于 D（${cA}%）与 P（${cB}%）之间，液相先被耗尽而 α 有剩余。最终为残余 α 心部被 β 壳层包裹的「壳心结构」，这是包晶组织不平衡的典型标志。`,
+  };
+  const betaSolidus = at(diagram, 'beta-solidus', c);
+  if (betaSolidus !== null && T > betaSolidus) return {
+    stage: '包晶反应后继续结晶', name: 'L + β相',
+    formation: `成分位于 P（${cB}%）与 C（${cL}%）之间，α 先被耗尽而液相有剩余。剩余液相继续析出 β，直至 ${betaSolidus.toFixed(0)}℃ 凝固完毕。`,
+  };
+  return { stage: '凝固完成', name: 'β固溶体（单相）', formation: '包晶反应后剩余液相全部转变为 β，最终得到单相 β 固溶体。' };
+}
+
+// ── Fe–Fe₃C ──────────────────────────────────────────────────
+function ironCarbon(diagram: PhaseDiagramDefinition, c: number, T: number): Microstructure {
+  const band = reactionBand(diagram);
+  const [peri, eut, eutd] = diagram.invariants;          // 1495 / 1148 / 727
+  const cP = 0.0218, cS = 0.77, cE = 2.11, cC = 4.3;
+  const liquidusId = c <= 0.53 ? 'liquidus-delta' : c <= cC ? 'liquidus-gamma' : 'liquidus-cementite';
+  const liquidus = at(diagram, liquidusId, c) ?? diagram.temperatureAxis.max;
+  const a3 = at(diagram, 'a3', c);
+  const acm = at(diagram, 'acm', c);
+
+  if (T > liquidus) return { stage: '液态', name: '液相 L', formation: `合金完全熔融，冷却到液相线 ${liquidus.toFixed(0)}℃ 才开始结晶。` };
+
+  // —— 铸铁侧（wC > 2.11）——
+  if (c > cE) {
+    const hypo = c < cC - 0.05, hyper = c > cC + 0.05;
+    const kind = hypo ? '亚共晶白口铸铁' : hyper ? '过共晶白口铸铁' : '共晶白口铸铁';
+    if (T > eut.temperature + band) {
+      if (hypo) return { stage: '初生奥氏体结晶', name: 'L + 初生奥氏体', formation: `${kind}。液相冷至 ${liquidus.toFixed(0)}℃ 析出初生奥氏体枝晶，剩余液相成分沿液相线移向共晶点 ${cC}%。` };
+      if (hyper) return { stage: '一次渗碳体结晶', name: 'L + 一次渗碳体（Fe₃CⅠ）', formation: `${kind}。液相中直接析出粗大板条状一次渗碳体 Fe₃CⅠ，剩余液相成分沿液相线移向共晶点 ${cC}%。` };
+      return { stage: '液态（共晶成分）', name: '液相 L', formation: `${kind}。不析出初生相，直到 ${eut.temperature}℃ 一次性发生共晶反应。` };
+    }
+    if (T > eut.temperature - band) return {
+      stage: '共晶反应阶段', name: hypo ? '初生奥氏体 + 莱氏体（Ld）形成中' : hyper ? '一次渗碳体 + 莱氏体（Ld）形成中' : '莱氏体（Ld）形成中',
+      formation: `${eut.temperature}℃ 恒温发生 ${eut.equation}。剩余液相转变为奥氏体与渗碳体的机械混合物——高温莱氏体 Ld。`,
+    };
+    if (T > eutd.temperature + band) return {
+      stage: '二次渗碳体析出', name: hypo ? '初生奥氏体 + 二次渗碳体（Fe₃CⅡ）+ 莱氏体（Ld）' : hyper ? '一次渗碳体（Fe₃CⅠ）+ 莱氏体（Ld）' : '莱氏体（Ld）',
+      formation: `共晶反应结束后继续冷却，奥氏体含碳量沿 Acm 线下降，沿晶界析出二次渗碳体 Fe₃CⅡ。莱氏体中的奥氏体同样在析出 Fe₃CⅡ。`,
+    };
+    if (T > eutd.temperature - band) return {
+      stage: '共析反应阶段', name: '莱氏体中奥氏体正转变为珠光体',
+      formation: `${eutd.temperature}℃ 恒温发生 ${eutd.equation}。所有奥氏体（含莱氏体内的奥氏体）转变为珠光体，高温莱氏体 Ld 随之变为低温莱氏体 Ld′。`,
+    };
+    return {
+      stage: '室温组织', name: hypo ? '珠光体 + 二次渗碳体 + 低温莱氏体（Ld′）' : hyper ? '一次渗碳体（Fe₃CⅠ）+ 低温莱氏体（Ld′）' : '低温莱氏体（Ld′）',
+      formation: hypo
+        ? '初生奥氏体转变为珠光体（呈枝晶状黑块），其外围为网状二次渗碳体，二者分布在低温莱氏体基体上。'
+        : hyper
+          ? '粗大白亮板条状一次渗碳体贯穿视场，其余为低温莱氏体基体。Fe₃CⅠ 是区分过共晶与亚共晶白口铸铁的判据。'
+          : '低温莱氏体：珠光体呈黑色粒状或短棒状分布在白亮渗碳体基体上，形似豹纹。硬而脆，不能切削加工。',
+    };
+  }
+
+  // —— 钢侧（wC ≤ 2.11）——
+  const deltaZone = c <= 0.53;
+  if (deltaZone && T > peri.temperature + band) {
+    // δ 固相线只覆盖 0–0.09%（H 点）。成分超出时 δ 始终与液相共存，直到 1495℃ 包晶反应，
+    // 不会出现单相 δ；此处返回 null 不能当作「已凝固」。
+    const deltaSolidus = at(diagram, 'delta-solidus', c);
+    if (deltaSolidus === null || T > deltaSolidus) return {
+      stage: '初生δ铁素体结晶', name: 'L + 初生δ铁素体',
+      formation: `液相冷至 ${liquidus.toFixed(0)}℃ 开始析出高温 δ 铁素体枝晶（体心立方）。继续冷却时液相成分沿液相线移向 B 点 0.53%、δ 成分移向 H 点 0.09%，为 ${peri.temperature}℃ 的包晶反应做准备。`,
+    };
+    return { stage: '高温固溶阶段', name: 'δ铁素体（单相）', formation: `液相在 ${deltaSolidus.toFixed(0)}℃ 耗尽，得到单相高温 δ 铁素体。含碳量低于 H 点 0.09%，继续冷却将通过同素异构转变为奥氏体。` };
+  }
+  if (deltaZone && T > peri.temperature - band && c >= peri.points.left && c <= peri.points.right) return {
+    stage: '包晶反应阶段', name: 'L + δ + A（三相共存）',
+    formation: `${peri.temperature}℃ 恒温发生 ${peri.equation}。液相与 δ 铁素体在界面处反应生成奥氏体。`,
+  };
+  const gammaSolidus = at(diagram, 'gamma-solidus', c);
+  if (gammaSolidus !== null && T > gammaSolidus && T < liquidus) return {
+    stage: '奥氏体结晶阶段', name: 'L + 初生奥氏体', formation: '液相中析出奥氏体枝晶，剩余液相成分沿液相线变化。',
+  };
+
+  const hypoEutectoid = c < cS - 0.01, hyperEutectoid = c > cS + 0.01;
+  const steelKind = c < cP ? '工业纯铁' : hypoEutectoid ? '亚共析钢' : hyperEutectoid ? '过共析钢' : '共析钢';
+
+  if (T > eutd.temperature + band) {
+    if (hypoEutectoid && a3 !== null && T <= a3) return {
+      stage: '先共析铁素体析出', name: '奥氏体 + 先共析铁素体',
+      formation: `${steelKind}。冷至 A₃ 线 ${a3.toFixed(0)}℃ 以下，先共析铁素体沿奥氏体晶界形核长大，剩余奥氏体含碳量沿 GS 线升高，趋向共析成分 ${cS}%。`,
+    };
+    if (hyperEutectoid && acm !== null && T <= acm) return {
+      stage: '二次渗碳体析出', name: '奥氏体 + 二次渗碳体（Fe₃CⅡ）',
+      formation: `${steelKind}。冷至 Acm 线 ${acm.toFixed(0)}℃ 以下，二次渗碳体沿奥氏体晶界呈网状析出，剩余奥氏体含碳量沿 ES 线降低，趋向共析成分 ${cS}%。`,
+    };
+    return { stage: '单相奥氏体', name: '奥氏体（A）', formation: `${steelKind}。此时为单相奥氏体，面心立方，晶粒呈多边形等轴状，常见退火孪晶。` };
+  }
+
+  if (T > eutd.temperature - band && c >= cP) return {
+    stage: '共析反应阶段', name: '珠光体形成中',
+    formation: `${eutd.temperature}℃ 恒温发生 ${eutd.equation}。含碳量已达 ${cS}% 的奥氏体转变为铁素体与渗碳体的层片状机械混合物——珠光体。`,
+  };
+
+  if (c < cP) {
+    const solvus = at(diagram, 'alpha-solvus', c);
+    if (solvus === null || T > solvus) return { stage: '室温组织', name: '铁素体（F）', formation: '工业纯铁。含碳量低于 0.0218%，室温组织为单相铁素体，白亮多边形等轴晶粒。' };
+    return { stage: '三次渗碳体析出', name: '铁素体 + 三次渗碳体（Fe₃CⅢ）', formation: '铁素体中碳的溶解度随温度下降而减小，沿晶界析出极少量三次渗碳体 Fe₃CⅢ。' };
+  }
+  if (hypoEutectoid) return {
+    stage: '室温组织', name: '铁素体 + 珠光体',
+    formation: `${steelKind}。先共析铁素体呈白亮块状或网状，其余奥氏体在 ${eutd.temperature}℃ 转变为层片状珠光体。含碳量越低，铁素体比例越大。`,
+  };
+  if (hyperEutectoid) return {
+    stage: '室温组织', name: '珠光体 + 二次渗碳体',
+    formation: `${steelKind}。二次渗碳体呈白亮网状包围原奥氏体晶界，网内为珠光体。网状 Fe₃CⅡ 显著降低韧性，生产上需球化退火消除。`,
+  };
+  return { stage: '室温组织', name: '珠光体（P）', formation: `${steelKind}。全部为珠光体，铁素体与渗碳体交替呈层片状，浸蚀后高倍下呈明暗相间条纹，低倍下形似指纹。` };
+}
 
 export function describeMicrostructure(
   diagram: PhaseDiagramDefinition,
   composition: number,
   temperature: number,
 ): Microstructure | null {
-  const region = regionAt(diagram, composition, temperature);
-  if (!region) return null;
-  if (diagram.id === 'fe-c') return ironCarbon(region.id, composition);
-  return GENERIC[diagram.id]?.[region.id] ?? null;
+  const c = Math.min(diagram.compositionAxis.max, Math.max(diagram.compositionAxis.min, composition));
+  const T = Math.min(diagram.temperatureAxis.max, Math.max(diagram.temperatureAxis.min, temperature));
+  switch (diagram.id) {
+    case 'cu-ni': return isomorphous(diagram, c, T);
+    case 'pb-sn': return eutectic(diagram, c, T);
+    case 'pt-ag': return peritectic(diagram, c, T);
+    case 'fe-c': return ironCarbon(diagram, c, T);
+    default: return null;
+  }
 }

@@ -1,7 +1,8 @@
 import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { ModuleId, PhaseDiagramDefinition, PhaseState, Point } from '../data';
 import { buildRegionPolygon, sampleBoundary, temperatureAt } from '../lib/geometry';
-import { legendPhases, phaseColor, readableInk, regionColor } from '../lib/phaseColors';
+import { legendEntries, regionColor } from '../lib/phaseColors';
+import { numberedPresets } from '../lib/presets';
 import { isInvariantApplicable } from '../lib/phaseState';
 import type { DisplayOptions } from './ControlPanel';
 
@@ -79,10 +80,8 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
     );
   };
   const tie = useMemo(() => state.equilibrium.length === 2 ? state.equilibrium.map((item) => item.composition) : [], [state.equilibrium]);
-  const phases = useMemo(() => legendPhases([
-    ...diagram.regions.flatMap((region) => region.phases),
-    ...diagram.boundaries.flatMap((boundary) => boundary.phases),
-  ]), [diagram]);
+  const legend = useMemo(() => legendEntries(diagram.regions.map((region) => region.phases)), [diagram]);
+  const presets = useMemo(() => numberedPresets(diagram.presets), [diagram]);
   const coolingStart = runStartTemperature ?? diagram.temperatureAxis.max;
   const coolingNodes = useMemo(() => {
     const nodes = [
@@ -185,8 +184,7 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
     {display.labels && diagram.regions.map((region) => {
       const anchorX = x(region.labelAnchor[0]), anchorY = y(region.labelAnchor[1]);
       const textX = anchorX + (region.labelOffset?.dx ?? 0), textY = anchorY + (region.labelOffset?.dy ?? 0);
-      const ink = region.labelOffset ? undefined : readableInk(regionColor(region.phases, `${diagram.id}:${region.id}`));
-      return <g key={region.id}>{region.labelOffset && <line className="region-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className={`region-label ${region.id === state.regionId ? 'active' : ''}`} fill={ink} x={textX} y={textY}>{region.label}</text></g>;
+      return <g key={region.id}>{region.labelOffset && <line className="region-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className={`region-label ${region.id === state.regionId ? 'active' : ''}`} x={textX} y={textY}>{region.label}</text></g>;
     })}
     {display.labels && diagram.annotations?.map((annotation) => {
       const anchorX = x(annotation.anchor[0]), anchorY = y(annotation.anchor[1]);
@@ -196,7 +194,19 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
     {display.keyPoints && diagram.keyPoints.map((point) => <g className="key-point" key={`${point.label}-${point.composition}`}><circle className="key-point-hit" cx={x(point.composition)} cy={y(point.temperature)} r="11" tabIndex={0} role="button" aria-label={`跳到关键点 ${point.label}`} onPointerDown={(event) => { event.stopPropagation(); jumpTo(point.composition, point.temperature); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); jumpTo(point.composition, point.temperature); } }}/><circle cx={x(point.composition)} cy={y(point.temperature)} r="3"/>{((point.dx ?? 0) > 10 || Math.abs(point.dy ?? 0) > 20) ? <line className="key-leader" x1={x(point.composition)} y1={y(point.temperature)} x2={x(point.composition) + (point.dx ?? 5) - 3} y2={y(point.temperature) + (point.dy ?? -8) + 3}/> : null}<text x={x(point.composition) + (point.dx ?? 5)} y={y(point.temperature) + (point.dy ?? -8)}>{point.label}</text></g>)}
     {diagram.invariants.map((reaction) => module === 'invariant' || activeInvariant === reaction.id ? <g className="invariant-points" key={`${reaction.id}-points`}>{[reaction.points.left, reaction.points.middle, reaction.points.right].map((composition, index) => <g key={composition}><circle className="key-point-hit" cx={x(composition)} cy={y(reaction.temperature)} r="11" tabIndex={0} role="button" aria-label={`跳到 ${reaction.equation} 的 ${composition}% 特征点`} onPointerDown={(event) => { event.stopPropagation(); jumpTo(composition, reaction.temperature); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); jumpTo(composition, reaction.temperature); } }}/><circle cx={x(composition)} cy={y(reaction.temperature)} r={index === 1 ? 6 : 4}/></g>)}</g> : null)}
 
-    <g className="phase-legend">{phases.map((phase, index) => <g key={phase} transform={`translate(${M.left + index * 67} 27)`}><rect width="15" height="11" rx="2" fill={phaseColor(phase)}/><text x="20" y="10">{phase}</text></g>)}</g>
+    <g className="phase-legend">{legend.map((item, index) => <g key={item.category} transform={`translate(${M.left + index * 132} 8)`}><rect width="15" height="11" rx="2" fill={item.color}/><text x="20" y="10">{item.label}</text></g>)}</g>
+    <g className="preset-marks">{presets.map((preset) => {
+      const px = x(preset.composition);
+      return <g key={preset.id}>
+        <line className="preset-tick" x1={px} y1={M.top - 7} x2={px} y2={M.top + 6}/>
+        <circle className="preset-mark-bg" cx={px} cy={M.top - 16} r="9"/>
+        <circle className="preset-mark-hit" cx={px} cy={M.top - 16} r="12" tabIndex={0} role="button"
+          aria-label={`跳到预设 ${preset.label}`}
+          onPointerDown={(event) => { event.stopPropagation(); jumpTo(preset.composition, preset.temperature); }}
+          onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); jumpTo(preset.composition, preset.temperature); } }}/>
+        <text className="preset-mark-text" x={px} y={M.top - 12}>{preset.order}</text>
+      </g>;
+    })}</g>
     <g className="axis"><line x1={M.left} y1={M.top} x2={M.left} y2={M.top + H}/><line x1={M.left} y1={M.top + H} x2={M.left + W} y2={M.top + H}/>
       {diagram.compositionAxis.ticks.map((tick) => <g key={`x${tick}`}><line x1={x(tick)} y1={M.top + H} x2={x(tick)} y2={M.top + H + 7}/><text x={x(tick)} y={M.top + H + 25}>{tick}</text></g>)}
       {diagram.temperatureAxis.ticks.map((tick) => <g key={`y${tick}`}><line x1={M.left - 7} y1={y(tick)} x2={M.left} y2={y(tick)}/><text className="y-tick" x={M.left - 12} y={y(tick) + 4}>{tick}</text></g>)}

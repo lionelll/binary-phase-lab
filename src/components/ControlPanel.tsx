@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { ChartSpline } from 'lucide-react';
 import { diagrams, type DiagramId, type ModuleId, type PhaseDiagramDefinition } from '../data';
 import { formatNumericValue, parseCommittedNumber } from '../lib/numericInput';
+import { describeMicrostructure } from '../lib/microstructure';
+import { numberedPresets } from '../lib/presets';
 import { Icon, type IconName } from './Icons';
 
 export interface DisplayOptions { labels: boolean; constituents: boolean; keyPoints: boolean; tieLine: boolean }
@@ -68,6 +70,16 @@ export function ControlPanel(props: Props) {
       <div className="panel-heading"><span>功能模块</span></div>
       <div className="module-list">{modules.map((item) => <button type="button" className={`module-row ${props.module === item.id ? 'active' : ''}`} key={item.id} onClick={() => props.onModule(item.id)}><Icon name={item.icon}/><span>{item.label}</span></button>)}</div>
     </section>
+    {props.module === 'microstructure' && (() => {
+      const micro = describeMicrostructure(diagram, props.composition, props.temperature);
+      return <section className="panel micro-card"><div className="panel-heading"><span>金相显微组织</span></div><div className="micro-content">
+        {micro ? <>
+          <span className="micro-label">冷却阶段</span><em className="micro-stage">{micro.stage}</em>
+          <span className="micro-label">当前显微组织</span><strong>{micro.name}</strong>
+          <span className="micro-label">组织形成过程</span><p>{micro.formation}</p>
+        </> : <p className="micro-empty">该相图暂未提供显微组织判定。</p>}
+      </div></section>;
+    })()}
     <section className="panel parameter-panel">
       <div className="panel-heading"><span>实验参数</span></div>
       <div className="control-stack">
@@ -85,9 +97,11 @@ export function ControlPanel(props: Props) {
       }}/><span className="fake-check"/><span>{label}</span></label>)}
     {diagram.presets && <div className="preset-block">
       <span className="preset-title">典型合金预设</span>
-      <div className="preset-list">{diagram.presets.map((preset) => (
+      <div className="preset-list">{numberedPresets(diagram.presets).map((preset) => (
         <button type="button" className="preset-chip" key={preset.id}
-          onClick={() => props.onPreset(preset.composition, preset.temperature)}>{preset.label}</button>
+          onClick={() => props.onPreset(preset.composition, preset.temperature)}>
+          <span className="preset-mark">{preset.mark}</span>{preset.label}
+        </button>
       ))}</div>
     </div>}
     </div></section>
