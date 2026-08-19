@@ -754,3 +754,22 @@
   font-style: normal;
   font-weight: 700;
 }
+
+/* 视觉隐藏的复选框若没有定位祖先，position:absolute 会让它脱离左栏的滚动上下文，
+   停在文档坐标不动。点击标签时焦点落到视口外的它，浏览器把它滚进视野，
+   连带滚动了 overflow:hidden 的外壳，页面就再也回不到顶部。
+   这里把它钉在所属行内，使焦点位置与可见的勾选框重合。 */
+.toggle-row {
+  position: relative;
+}
+
+.toggle-row input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
