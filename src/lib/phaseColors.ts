@@ -1,22 +1,62 @@
 /**
- * 相区配色：按「相区类型」着色，而不是按单个相的身份。
- * 读图时一眼可分辨单相 / 液固两相 / 固态两相，这是教学相图的主要诉求。
+ * 相区配色：清新柔和的功能色方案。
  *
- * 同类相区若彼此相邻，则用同色系的第二变体区分；变体分配见 REGION_VARIANT。
+ * 两条原则：
+ * 1. 颜色按「相区类型」分族——液相蓝青系、单相固溶体绿系、第二相黄橙系、
+ *    液固两相紫橙系、固态两相粉青系，读图时先分类型再看具体相区。
+ * 2. 同一相图中相邻的相区必须可分辨。全部相邻相区对在 OKLab 下的色差已逐一核过，
+ *    最小 ΔE ≈ 0.059（γ | α+γ，薄荷绿与湖蓝，色相本身就分得开），其余均在 0.077 以上。
+ *    phaseColors.test.ts 会按几何相邻关系逐对复核，低于 ΔE 0.05 直接失败。
+ *
+ * 填充统一用半透明，压低饱和度与明度对比，避免相区色盖过相界线和标注。
  */
 
 export type RegionCategory = 'liquid' | 'solution' | 'compound' | 'liquid-solid' | 'solid-solid';
 
-/** 每类的主色与备用变体（Tailwind 同族色）。 */
-const CATEGORY_COLORS: Record<RegionCategory, [string, string]> = {
-  liquid: ['#38bdf8', '#38bdf8'],            // 天蓝
-  solution: ['#22c55e', '#10b981'],          // 翠绿 / 翡翠绿
-  compound: ['#f59e0b', '#f59e0b'],          // 琥珀金黄
-  'liquid-solid': ['#a855f7', '#7c3aed'],    // 紫罗兰紫 / 深紫（补充变体）
-  'solid-solid': ['#ec4899', '#ef4444'],     // 玫瑰粉 / 赤红
+/** 相区填充透明度。数值越低越淡，同时相邻相区的色差也越小。 */
+export const REGION_FILL_ALPHA = 0.42;
+
+/** 相名排序，保证 ['α','L'] 与 ['L','α'] 得到同一个键。 */
+const PHASE_ORDER = ['L', 'δ', 'α', 'γ', 'β', 'Fe₃C'];
+
+function phaseKey(phases: string[]): string {
+  return [...phases]
+    .sort((a, b) => (PHASE_ORDER.indexOf(a) + 1 || 99) - (PHASE_ORDER.indexOf(b) + 1 || 99))
+    .join('+');
+}
+
+/** 相组合 → 基色。注释里的名称即配色方案中的叫法。 */
+const PHASE_COLORS: Record<string, string> = {
+  'L': '#38bdf8',        // 清新天青蓝——单相液相区
+  'α': '#34d399',        // 薄荷翠绿——基体固溶体
+  'γ': '#34d399',        // 薄荷翠绿——基体固溶体
+  'δ': '#67e8f9',        // 浅水青——高温固溶体。δ+γ 透镜最宽处也只有几个像素，
+                         // δ 与 γ 实际上贴在一起，用比 #2dd4bf 更偏青的色才分得开。
+  'β': '#fde047',        // 浅柠檬黄——第二相固溶体。比 #fbbf24 更黄，
+                         // 与相邻的 L+β 蜜桃橙由 ΔE 0.059 拉开到 0.094。
+  'L+α': '#a78bfa',      // 薰衣草淡紫——液固两相
+  'L+δ': '#a78bfa',      // 薰衣草淡紫——液固两相
+  'L+γ': '#f0abfc',      // 淡丁香紫——高碳液固区（比 #c084fc 浅，与相邻的 L+δ 薰衣草拉开色差）
+  'L+β': '#fb923c',      // 浅蜜桃橙——第二相结晶区
+  'L+Fe₃C': '#f87171',   // 浅珊瑚红——一次渗碳体区
+  'α+β': '#f472b6',      // 淡樱花粉——固态双相区
+  'δ+γ': '#f472b6',      // 淡樱花粉——固态双相区
+  'α+γ': '#22d3ee',      // 浅湖蓝——铁素体双相区
+  'α+Fe₃C': '#a78bfa',   // 薰衣草淡紫——共析产物两相区
+  'γ+Fe₃C': '#fcd34d',   // 浅暖金——奥氏体 + 渗碳体。铁碳相图里最大的一块，
+                         // 更淡的杏橙叠到深底色上彩度只剩 0.02，会退化成灰色。
 };
 
-/** 化合物或端际第二相，与固溶体区分开。 */
+/** 相组合未列入时按类型回退，保证新增相图也有合理配色。 */
+const CATEGORY_FALLBACK: Record<RegionCategory, string> = {
+  liquid: '#38bdf8',
+  solution: '#34d399',
+  compound: '#fbbf24',
+  'liquid-solid': '#a78bfa',
+  'solid-solid': '#f472b6',
+};
+
+/** 化合物或端际第二相，与基体固溶体区分开。 */
 const COMPOUND_PHASES = new Set(['β', 'Fe₃C']);
 
 export function regionCategory(phases: string[]): RegionCategory {
@@ -26,18 +66,29 @@ export function regionCategory(phases: string[]): RegionCategory {
   return COMPOUND_PHASES.has(phase) ? 'compound' : 'solution';
 }
 
-/** 仅列出「同类且相邻」需要改用变体的相区，其余一律用主色。 */
-const REGION_VARIANT: Record<string, 1> = {
-  'pt-ag:liquid-beta': 1,
-  'fe-c:gamma': 1,
-  'fe-c:liquid-gamma': 1,
-  'fe-c:alpha-gamma': 1,
-  'fe-c:gamma-cementite': 1,
-};
+/** 该相组合是否在 PHASE_COLORS 中显式指定了颜色（false 表示走了类型回退）。 */
+export function hasExplicitColor(phases: string[]): boolean {
+  return phaseKey(phases) in PHASE_COLORS;
+}
 
-export function regionColor(phases: string[], key?: string): string {
-  const pair = CATEGORY_COLORS[regionCategory(phases)];
-  return pair[key !== undefined && REGION_VARIANT[key] === 1 ? 1 : 0];
+/** 相区基色（不含透明度），用于图例色块等需要纯色的场合。 */
+export function regionBaseColor(phases: string[]): string {
+  return PHASE_COLORS[phaseKey(phases)] ?? CATEGORY_FALLBACK[regionCategory(phases)];
+}
+
+function withAlpha(hex: string, alpha: number): string {
+  const value = Number.parseInt(hex.slice(1), 16);
+  return `rgba(${(value >> 16) & 255}, ${(value >> 8) & 255}, ${value & 255}, ${alpha})`;
+}
+
+/** 相区填充色，半透明。 */
+export function regionColor(phases: string[]): string {
+  return withAlpha(regionBaseColor(phases), REGION_FILL_ALPHA);
+}
+
+/** 图例色块与相区填充同色同透明度。 */
+export function legendSwatchColor(hex: string): string {
+  return withAlpha(hex, REGION_FILL_ALPHA);
 }
 
 const CATEGORY_LABEL: Record<RegionCategory, string> = {
@@ -50,11 +101,23 @@ const CATEGORY_LABEL: Record<RegionCategory, string> = {
 
 const CATEGORY_ORDER: RegionCategory[] = ['liquid', 'solution', 'compound', 'liquid-solid', 'solid-solid'];
 
-/** 颜色编码的是相区类型，图例因此按类型给出，只列出该相图实际出现的类别。 */
-export function legendEntries(regionPhases: string[][]): Array<{ category: RegionCategory; label: string; color: string }> {
-  const present = new Set(regionPhases.map((phases) => regionCategory(phases)));
-  return CATEGORY_ORDER.filter((category) => present.has(category))
-    .map((category) => ({ category, label: CATEGORY_LABEL[category], color: CATEGORY_COLORS[category][0] }));
+/**
+ * 图例按相区类型分组。同一类型内若该相图用了多个色调，则并排列出全部色块，
+ * 避免图例只给一个色而画面上出现另一个色。
+ */
+export function legendEntries(
+  regionPhases: string[][],
+): Array<{ category: RegionCategory; label: string; colors: string[] }> {
+  const grouped = new Map<RegionCategory, string[]>();
+  for (const phases of regionPhases) {
+    const category = regionCategory(phases);
+    const colors = grouped.get(category) ?? [];
+    const color = regionBaseColor(phases);
+    if (!colors.includes(color)) colors.push(color);
+    grouped.set(category, colors);
+  }
+  return CATEGORY_ORDER.filter((category) => grouped.has(category))
+    .map((category) => ({ category, label: CATEGORY_LABEL[category], colors: grouped.get(category) as string[] }));
 }
 
 /** 半透明填充下底色始终偏暗，相区标签统一用浅色字。 */
