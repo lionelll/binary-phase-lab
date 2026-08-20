@@ -84,11 +84,15 @@ describe('phase diagram catalog', () => {
     solidus.forEach((value, index) => {
       if (index > 0) expect(value, `固相线斜率应严格递增，第 ${index} 段`).toBeGreaterThan(solidus[index - 1]);
     });
-    // 固相线中点相对两端熔点连线至少下凹 90℃，避免视觉上退化成近似直线。
+    // 50% Ni 处两相区温差精确收窄为上一版 185℃ 的 70%。
+    const liquidusBoundary = cuNi.boundaries.find((item) => item.id === 'liquidus')!;
     const solidusBoundary = cuNi.boundaries.find((item) => item.id === 'solidus')!;
+    const liquidusMidpoint = temperatureAt(liquidusBoundary, 50)!;
     const solidusMidpoint = temperatureAt(solidusBoundary, 50)!;
     const endpointChordMidpoint = (1085 + 1455) / 2;
-    expect(endpointChordMidpoint - solidusMidpoint).toBeGreaterThanOrEqual(90);
+    expect(liquidusMidpoint - solidusMidpoint).toBeCloseTo(185 * 0.7, 2);
+    // 两条曲线对称收窄，不单方面挤压液相区或固相区。
+    expect((liquidusMidpoint + solidusMidpoint) / 2).toBeCloseTo(endpointChordMidpoint, 2);
     // 透镜必须闭合于两纯组元端点，且中间处处张开
     for (let index = 1; index < 200; index += 1) {
       const composition = 100 * index / 200;
@@ -140,7 +144,7 @@ describe('phase diagram catalog', () => {
     const label = feC.constituents?.find((item) => item.id === 'c-f-fe3c3');
     expect(label?.text).toBe('F + Fe₃CⅢ');
     expect(regionAt(feC, label!.anchor[0], label!.anchor[1])?.id).toBe('alpha-cementite');
-    expect(compositionToNormalized(feC.compositionAxis, 0.0218)).toBeGreaterThan(0.02);
+    expect(compositionToNormalized(feC.compositionAxis, 0.0218)).toBeCloseTo(0.0218 / 6.69, 10);
   });
 
   it('classifies invariant states before regions and does not invent fractions', () => {

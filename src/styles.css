@@ -291,6 +291,25 @@
   gap: 0;
 }
 
+.module-control-section {
+  border-top: 1px solid var(--line);
+}
+
+.module-subheading {
+  min-height: 40px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  color: #edf5ff;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.module-control-section .control-stack {
+  padding-top: 4px;
+}
+
 .module-row.active {
   box-shadow: 0 7px 18px rgba(9, 106, 220, 0.25);
 }

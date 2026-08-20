@@ -3,15 +3,12 @@ import { feC, pbSn } from '../data';
 import { compositionToNormalized, normalizedToComposition } from './compositionScale';
 
 describe('composition display scale', () => {
-  it('keeps ordinary diagrams linear', () => {
+  it('keeps the current diagram axes linear', () => {
     expect(compositionToNormalized(pbSn.compositionAxis, 25)).toBeCloseTo(0.25, 10);
     expect(normalizedToComposition(pbSn.compositionAxis, 0.75)).toBeCloseTo(75, 10);
-  });
-
-  it('expands the Fe-C low-carbon end at the configured stops', () => {
-    expect(compositionToNormalized(feC.compositionAxis, 0.1)).toBeCloseTo(0.12, 10);
-    expect(compositionToNormalized(feC.compositionAxis, 0.77)).toBeCloseTo(0.26, 10);
-    expect(compositionToNormalized(feC.compositionAxis, 0.0218)).toBeGreaterThan(0.02);
+    expect(compositionToNormalized(feC.compositionAxis, 0.1)).toBeCloseTo(0.1 / 6.69, 10);
+    expect(compositionToNormalized(feC.compositionAxis, 0.77)).toBeCloseTo(0.77 / 6.69, 10);
+    expect(feC.compositionAxis.scaleStops).toBeUndefined();
   });
 
   it('round-trips Fe-C compositions without moving phase boundaries', () => {

@@ -2,17 +2,7 @@ import type { PhaseDiagramDefinition } from './types';
 
 export const feC: PhaseDiagramDefinition = {
   id:'fe-c', title:'Fe–Fe₃C 铁碳相图', shortTitle:'Fe–Fe₃C 铁碳', systemType:'铁碳相图', components:{left:'Fe',right:'Fe₃C'},
-  compositionAxis:{
-    min:0,max:6.69,ticks:[0,0.1,0.77,2.11,4.3,6.69],label:'wC / %（低碳端局部放大）',
-    // 0–0.10% C 区间放大，确保 α / δ 窄区与三次渗碳体组织可辨；
-    // 所有相界、关键点、状态点和拖拽反算统一使用同一分段比例尺。
-    scaleStops:[
-      {value:0,position:0},
-      {value:0.1,position:0.12},
-      {value:0.77,position:0.26},
-      {value:6.69,position:1},
-    ],
-  }, temperatureAxis:{min:600,max:1600,ticks:[600,727,912,1148,1394,1495,1600],label:'温度 / ℃'},
+  compositionAxis:{min:0,max:6.69,ticks:[0,0.77,2.11,4.3,6.69],label:'wC / %'}, temperatureAxis:{min:600,max:1600,ticks:[600,727,912,1148,1394,1495,1600],label:'温度 / ℃'},
   boundaries:[
     {id:'liquidus-delta',kind:'liquidus',phases:['L','L+δ'],points:[[0,1538],[0.25,1518],[0.53,1495]]},
     {id:'delta-solidus',kind:'solidus',phases:['δ','L+δ'],points:[[0,1538],[0.04,1515],[0.09,1495]]},
@@ -71,7 +61,7 @@ export const feC: PhaseDiagramDefinition = {
     {id:'c-a-fe3c2-ld',text:'A + Fe₃CⅡ + Ld',anchor:[3.2,950]},
     {id:'c-ld-fe3c1',text:'Ld + Fe₃CⅠ',anchor:[5.5,950]},
     {id:'c-ferrite',text:'F',anchor:[0.01,690],offset:{dx:30,dy:-4}},
-    {id:'c-f-fe3c3',text:'F + Fe₃CⅢ',anchor:[0.01,620],offset:{dx:75,dy:-7}},
+    {id:'c-f-fe3c3',text:'F + Fe₃CⅢ',anchor:[0.01,620],offset:{dx:75,dy:-20}},
     {id:'c-f-p',text:'F + P',anchor:[0.45,628]},
     {id:'c-p-fe3c2',text:'P + Fe₃CⅡ',anchor:[1.44,663]},
     {id:'c-p-fe3c2-ld',text:'P + Fe₃CⅡ + Ld′',anchor:[3.2,663]},

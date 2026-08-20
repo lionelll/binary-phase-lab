@@ -98,15 +98,16 @@ export function ControlPanel(props: Props) {
         </button>
       ))}</div></div>
     }</CollapsiblePanel>}
-    <CollapsiblePanel id="panel-modules" title="功能模块" className="module-panel">{(collapseOnMobile) =>
+    <CollapsiblePanel id="panel-modules" title="功能模块" className="module-panel">{(collapseOnMobile) => <>
       <div className="module-list">{modules.map((item) => <button type="button" className={`module-row ${props.module === item.id ? 'active' : ''}`} key={item.id} onClick={() => { props.onModule(item.id); collapseOnMobile(); }}><Icon name={item.icon}/><span>{item.label}</span></button>)}</div>
-    }</CollapsiblePanel>
-    <CollapsiblePanel id="panel-parameters" title="实验参数" className="parameter-panel">
-      <div className="control-stack">
-        <label className="control-block"><span>合金成分 <b>{number(props.composition, diagram.compositionAxis.max)}%</b></span><div className="input-pair"><input aria-label="合金成分滑块" type="range" min={diagram.compositionAxis.min} max={diagram.compositionAxis.max} step={diagram.compositionAxis.max <= 10 ? .001 : .1} value={props.composition} onChange={(event) => {props.onManualChange();props.onComposition(Number(event.target.value));}}/><NumericField label="合金成分数值" value={props.composition} min={diagram.compositionAxis.min} max={diagram.compositionAxis.max} step={diagram.compositionAxis.max <= 10 ? .001 : .1} formatMax={diagram.compositionAxis.max} onCommit={(value) => { props.onManualChange(); props.onComposition(value); }}/></div><small>{diagram.components.left} ← {diagram.compositionAxis.label} → {diagram.components.right}</small></label>
-        <label className="control-block"><span>当前温度 <b>{Math.round(props.temperature)}℃</b></span><div className="input-pair"><input aria-label="温度滑块" type="range" min={diagram.temperatureAxis.min} max={diagram.temperatureAxis.max} step="1" value={props.temperature} onChange={(event) => {props.onManualChange();props.onTemperature(Number(event.target.value));}}/><NumericField label="温度数值" value={props.temperature} min={diagram.temperatureAxis.min} max={diagram.temperatureAxis.max} step={1} formatMax={10000} onCommit={(value) => { props.onManualChange(); props.onTemperature(value); }}/></div></label>
-      </div>
-    </CollapsiblePanel>
+      <section className="module-control-section" aria-labelledby="alloy-control-title">
+        <h3 className="module-subheading" id="alloy-control-title">合金成分与温度控制</h3>
+        <div className="control-stack">
+          <label className="control-block"><span>合金成分 <b>{number(props.composition, diagram.compositionAxis.max)}%</b></span><div className="input-pair"><input aria-label="合金成分滑块" type="range" min={diagram.compositionAxis.min} max={diagram.compositionAxis.max} step={diagram.compositionAxis.max <= 10 ? .001 : .1} value={props.composition} onChange={(event) => {props.onManualChange();props.onComposition(Number(event.target.value));}}/><NumericField label="合金成分数值" value={props.composition} min={diagram.compositionAxis.min} max={diagram.compositionAxis.max} step={diagram.compositionAxis.max <= 10 ? .001 : .1} formatMax={diagram.compositionAxis.max} onCommit={(value) => { props.onManualChange(); props.onComposition(value); }}/></div><small>{diagram.components.left} ← {diagram.compositionAxis.label} → {diagram.components.right}</small></label>
+          <label className="control-block"><span>当前温度 <b>{Math.round(props.temperature)}℃</b></span><div className="input-pair"><input aria-label="温度滑块" type="range" min={diagram.temperatureAxis.min} max={diagram.temperatureAxis.max} step="1" value={props.temperature} onChange={(event) => {props.onManualChange();props.onTemperature(Number(event.target.value));}}/><NumericField label="温度数值" value={props.temperature} min={diagram.temperatureAxis.min} max={diagram.temperatureAxis.max} step={1} formatMax={10000} onCommit={(value) => { props.onManualChange(); props.onTemperature(value); }}/></div></label>
+        </div>
+      </section>
+    </>}</CollapsiblePanel>
     <CollapsiblePanel id="panel-display" title="辅助显示" className="display-panel"><div className="switch-list">
       {(([['labels','相区标签'],...(diagram.constituents ? [['constituents','组织标注'] as const] : []),['keyPoints','关键点标注'],['tieLine','等温线与交点']]) as ReadonlyArray<readonly [keyof DisplayOptions, string]>).map(([key,label])=><label className="toggle-row" key={key}><input type="checkbox" checked={props.display[key]} onChange={(event)=>{
         const checked = event.target.checked;
