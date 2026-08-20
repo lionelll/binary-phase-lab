@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cuNi, diagrams, feC, pbSn, ptAg } from '.';
+import { compositionToNormalized } from '../lib/compositionScale';
 import { buildRegionPolygon, compositionsAt, distanceToRegionOutline, pointInPolygon, regionAt, sampleBoundary, temperatureAt } from '../lib/geometry';
 import { evaluatePhaseState } from '../lib/phaseState';
 
@@ -83,6 +84,11 @@ describe('phase diagram catalog', () => {
     solidus.forEach((value, index) => {
       if (index > 0) expect(value, `固相线斜率应严格递增，第 ${index} 段`).toBeGreaterThan(solidus[index - 1]);
     });
+    // 固相线中点相对两端熔点连线至少下凹 90℃，避免视觉上退化成近似直线。
+    const solidusBoundary = cuNi.boundaries.find((item) => item.id === 'solidus')!;
+    const solidusMidpoint = temperatureAt(solidusBoundary, 50)!;
+    const endpointChordMidpoint = (1085 + 1455) / 2;
+    expect(endpointChordMidpoint - solidusMidpoint).toBeGreaterThanOrEqual(90);
     // 透镜必须闭合于两纯组元端点，且中间处处张开
     for (let index = 1; index < 200; index += 1) {
       const composition = 100 * index / 200;
@@ -106,7 +112,7 @@ describe('phase diagram catalog', () => {
   it('keeps the narrow Fe-C labels inside the plot and clear of H/J annotations', () => {
     type Box = { left:number; right:number; top:number; bottom:number };
     const plot = { left:92, right:872, top:58, bottom:612 };
-    const x = (composition:number) => plot.left + composition / 6.69 * 780;
+    const x = (composition:number) => plot.left + compositionToNormalized(feC.compositionAxis, composition) * 780;
     const y = (temperature:number) => plot.top + (1600 - temperature) / 1000 * 554;
     const regionBox = (id:string):Box => {
       const region = feC.regions.find((item) => item.id === id)!;
@@ -128,6 +134,13 @@ describe('phase diagram catalog', () => {
     expect(delta.top).toBeGreaterThanOrEqual(plot.top);
     expect(intersects(regionBox('liquid-delta'), keyBox('H '))).toBe(false);
     expect(intersects(regionBox('delta-gamma'), keyBox('J '))).toBe(false);
+  });
+
+  it('anchors the tertiary-cementite constituent label in the low-carbon alpha-cementite region', () => {
+    const label = feC.constituents?.find((item) => item.id === 'c-f-fe3c3');
+    expect(label?.text).toBe('F + Fe₃CⅢ');
+    expect(regionAt(feC, label!.anchor[0], label!.anchor[1])?.id).toBe('alpha-cementite');
+    expect(compositionToNormalized(feC.compositionAxis, 0.0218)).toBeGreaterThan(0.02);
   });
 
   it('classifies invariant states before regions and does not invent fractions', () => {

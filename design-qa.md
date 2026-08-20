@@ -17,6 +17,11 @@
   - `docs/design-qa-current-info-reference-full.png`
   - `docs/design-qa-heading-icons-removal-request.png`
   - `docs/design-qa-right-panel-typography-reference.png`
+  - `docs/design-qa-cu-ni-solidus-reference.png`
+  - `docs/design-qa-legend-removal-reference.png`
+  - `docs/design-qa-invariant-solid-line-reference.png`
+  - `docs/design-qa-topbar-actions-reference.png`
+  - `docs/design-qa-teaching-card-removal-reference.png`
 - implementation screenshots:
   - `docs/design-qa-stage-heading.png`
   - `docs/design-qa-panel-heading.png`
@@ -38,6 +43,11 @@
   - `docs/design-qa-heading-icons-removed-full.png`
   - `docs/design-qa-right-panel-typography.png`
   - `docs/design-qa-right-panel-typography-full.png`
+  - `docs/design-qa-cu-ni-solidus-implementation.jpg`
+  - `docs/design-qa-legend-removal-implementation.jpg`
+  - `docs/design-qa-invariant-solid-line-implementation.jpg`
+  - `docs/design-qa-topbar-actions-implementation.jpg`
+  - `docs/design-qa-teaching-card-removal-implementation.jpg`
 - normalized comparison:
   - `docs/design-qa-typography-comparison.png`
   - `docs/design-qa-selector-content-removal-comparison.png`
@@ -47,6 +57,11 @@
   - `docs/design-qa-current-info-comparison.png`
   - `docs/design-qa-heading-icons-removal-comparison.png`
   - `docs/design-qa-right-panel-typography-comparison.png`
+  - `docs/design-qa-cu-ni-solidus-comparison.png`
+  - `docs/design-qa-legend-removal-comparison.png`
+  - `docs/design-qa-invariant-solid-line-comparison.png`
+  - `docs/design-qa-topbar-actions-comparison.png`
+  - `docs/design-qa-teaching-card-removal-comparison.png`
 - source project: `材科基晶体结构部分/crystal-structure-lab`
 - implementation project: `材科基二元相图部分/binary-phase-lab`
 - viewport: `1280px` 宽；浏览器设备像素比为 `2`
@@ -155,6 +170,14 @@
 - Colors and visual tokens: 标题前景色、面板背景和底部分隔线继续沿用相同全局变量；相图选择图标由 `--lab-selector-icon-color: #fff` 统一控制，普通与选中状态无色差。
 - Image quality and asset fidelity: 两项目使用同一品牌 Logo 资产；布局尺寸、缩放和阴影一致。相图选择卡片使用四种不同的 Lucide 标准线性 SVG 图标，尺寸和间距与晶体结构选择图标一致；按产品要求移除“功能模块”标题前图标，未使用图片贴图或占位资产。
 - Copy and content: 二元相图保留相图名称、功能模块和信息卡业务文案；按产品标注明确移除选择卡片的体系说明与右侧箭头，不影响右栏“体系类型”信息。当前信息五个标签已按晶体结构格式补齐中文冒号，标题前装饰图标已移除。
+- Cu–Ni 固相线曲率：两端继续固定在 Cu `1085℃` 与 Ni `1455℃`；`50% Ni` 处由 `1235.3℃` 调整为 `1177.5℃`，相对两端连线中点的下凹量由 `34.7℃` 增至 `92.5℃`。`docs/design-qa-cu-ni-solidus-comparison.png` 显示实现曲线已接近产品红线标注的明显下凹走势，且相区闭合、文字、颜色和交互布局未改变。
+- 相图顶部图例：按产品红框要求从共享 SVG 中整体删除，Cu–Ni、Pt–Ag、Pb–Sn、Fe–Fe₃C 四套相图浏览器实测 `.phase-legend` 数量均为 `0`；预设编号、坐标轴和相区标签继续保留。
+- 相标记上下标：`Ⅰ / Ⅱ / Ⅲ` 统一使用下角标排版。HTML 中为语义化 `<sub>`（计算值 `vertical-align: sub`），SVG 组织标注中为 `<tspan baseline-shift="sub">`；浏览器检查 Fe–Fe₃C 组织视角共命中 7 个 SVG 下角标，二次渗碳体说明中的 `Fe₃CⅡ` 也正确下沉。
+- 三相反应线：共享 `.invariant-line` 基础样式由虚线改为实线，高亮态继续保持实线与加粗发光。浏览器逐图计算样式确认 Pt–Ag 的 1 条、Pb–Sn 的 1 条、Fe–Fe₃C 的 3 条反应线均为 `stroke-dasharray: none`；Cu–Ni 没有三相反应，因此无反应线。红色成分垂线与青色等温辅助线继续保留虚线。
+- 顶栏操作：因首页尚未完成，暂时移除“返回首页”链接和对应未使用的 `home` 图标；“重置实验”改名为“重置相图”。桌面与移动布局均只保留“重置相图 / 自动凝固”两项操作，没有留下占位或横向溢出。
+- 右栏信息架构：教学解析卡已删除；“显微组织及相对含量”从左栏功能入口迁移为右栏常驻卡片，位于“相平衡”下方、“反应信息”上方。卡片同时显示冷却阶段、当前显微组织、组织相对含量条和组织形成过程。
+- 功能模块精简：左栏移除“相图结构”“冷却过程”“金相显微组织”三个入口，仅保留“杠杆定律”和“三相反应”。相图结构继续常驻中央画布，自动凝固继续由顶栏按钮启动，因此没有删除底层能力。
+- 组织相对含量：Cu–Ni 和反应前状态使用实时相平衡比例；Pb–Sn 在共晶温度处按初生相/共晶组织应用杠杆关系；Fe–Fe₃C 按共析或共晶温度计算先共析组织、珠光体、莱氏体及一次/二次渗碳体。三相反应进行中明确提示比例随反应进度变化，不显示虚假的唯一比例。
 
 ## Comparison history
 
@@ -173,6 +196,15 @@
 13. 当前信息卡严格统一：删除标题前 `info` 图标，内容区由 `38% / 9px 17px 13px / 35px` 调整为晶体结构的 `45% / 18px 24px 25px / 53px`，同步标签与数值颜色、字重和中文冒号。默认 Cu–Ni 与最长文案 Fe–Fe₃C 状态均无截断、无横向溢出，控制台无 error/warning。
 14. 左侧标题图标收尾：按产品标注删除“实验参数”前的 `settings` 图标和“辅助显示”前的 `info` 图标；标题文字、`17px / 800 / 54px` 层级、标题栏内边距与下方控件保持不变。
 15. 右栏业务卡片收尾：删除“相平衡”“反应信息”“教学解析”标题前的 SVG 图标；浏览器确认右栏四个 `.card-title` 的 `svgCount` 均为 `0`，标题继续保持 `17px / 800 / 54px / 0 20px`。反应信息与教学解析内容区统一采用晶体结构教学卡的 `22px 24px 0` 内边距、`22px` 卡片底部留白、`#d8e4f2` 文字色与 `15px / 1.9` 正文层级；三相反应激活时的 `18px` 公式强调继续保留。`1440 × 900` 实测无横向溢出，右栏滚动后所有正文完整可见。
+16. Cu–Ni 固相线曲率收尾：保持两个纯组元端点不变，重新布置固相线控制点，使曲线温度严格递增、分段斜率严格递增，并将中点下凹量锁定为至少 `90℃`。本地浏览器默认状态与 B30 预设交互均正常，无 error/warning；对照图确认曲线不再接近直线。
+17. 图例与相标记收尾：删除共享 `PhaseDiagramSvg` 顶部颜色图例，四套相图逐一切换后均确认图例节点不存在；新增统一相标记渲染器，将 `αⅡ`、`βⅡ`、`Fe₃CⅠ/Ⅱ/Ⅲ` 的罗马数字显示为下角标。Pt–Ag 与 Fe–Fe₃C 实际页面无布局异常，控制台无 error/warning。
+18. 三相反应线收尾：按产品红框将非激活状态的包晶、共晶、共析水平线从 `7 5` 虚线改为实线；高亮态样式不变。四套相图逐一切换验证，所有实际存在的反应线计算值均为 `none`，页面控制台无 error/warning。
+19. 顶栏操作收尾：删除“返回首页”入口并将重置按钮文案改为“重置相图”。浏览器检查旧链接与旧文案数量均为 `0`、新按钮数量为 `1`；从 B10 白铜预设点击重置后正确恢复到 `40.0% Ni / 1260℃`，控制台无 error/warning。
+20. 教学解析卡收尾：从 `InfoPanel` 删除“教学解析”卡片并清理对应 CSS。浏览器确认“教学解析”标题数量为 `0`，“当前信息 / 相平衡 / 反应信息”均各保留 `1` 个；右栏自然收紧且控制台无 error/warning。
+21. 显微组织信息架构收尾：左侧“功能模块”浏览器实测只剩“杠杆定律 / 三相反应”，旧“相图结构 / 冷却过程 / 金相显微组织”入口均不再渲染；右栏新增“显微组织及相对含量”常驻卡片。Pb–Sn `80% Sn / 120℃` 显示“初生β相 50.8% +（α+β）共晶组织 49.2%”，Fe–Fe₃C `0.45% C / 650℃` 显示“先共析铁素体 42.8% + 珠光体 57.2%”，两组均合计 `100.0%`。页面无横向溢出，控制台无 error/warning。
+22. 反应信息按需显示：普通单相区与两相区不再渲染“当前无三相反应”占位卡；只有状态点同时命中三相反应温度及其适用成分区间时，右栏才插入“反应信息”卡并显示反应式、反应温度和反应类型。离开反应线后卡片即时移除，右栏其余卡片自然上移。
+23. 典型合金预设位置调整：预设按钮从“辅助显示”内容区移出，改为独立的“典型合金预设”面板，固定排列在“相图类型”下方、“功能模块”上方。四套相图切换后预设内容随相图同步更新；移动端选中预设后自动收起该面板，成分与温度联动保持不变。
+24. Fe–Fe₃C 低碳端组织标注：成分轴改为标明“低碳端局部放大”的分段比例尺，0–0.10% C 区间获得足够显示宽度；新增 `F + Fe₃CⅢ` 引线标注。浏览器实测该标注在绘图区内且与其他组织文字零重叠；H(0.09)、J(0.17)、B(0.53) 的横坐标保持严格递增，高温 δ、L+δ、δ+A 区均由同一真实成分映射绘制。页面无横向溢出，控制台无 error/warning。
 
 ## Findings
 

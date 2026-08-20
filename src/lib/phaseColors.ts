@@ -71,7 +71,7 @@ export function hasExplicitColor(phases: string[]): boolean {
   return phaseKey(phases) in PHASE_COLORS;
 }
 
-/** 相区基色（不含透明度），用于图例色块等需要纯色的场合。 */
+/** 相区基色（不含透明度），用于配色校验等需要纯色的场合。 */
 export function regionBaseColor(phases: string[]): string {
   return PHASE_COLORS[phaseKey(phases)] ?? CATEGORY_FALLBACK[regionCategory(phases)];
 }
@@ -84,40 +84,6 @@ function withAlpha(hex: string, alpha: number): string {
 /** 相区填充色，半透明。 */
 export function regionColor(phases: string[]): string {
   return withAlpha(regionBaseColor(phases), REGION_FILL_ALPHA);
-}
-
-/** 图例色块与相区填充同色同透明度。 */
-export function legendSwatchColor(hex: string): string {
-  return withAlpha(hex, REGION_FILL_ALPHA);
-}
-
-const CATEGORY_LABEL: Record<RegionCategory, string> = {
-  liquid: '液相',
-  solution: '固溶体单相',
-  compound: '化合物 / 第二相',
-  'liquid-solid': '液固两相',
-  'solid-solid': '固态两相',
-};
-
-const CATEGORY_ORDER: RegionCategory[] = ['liquid', 'solution', 'compound', 'liquid-solid', 'solid-solid'];
-
-/**
- * 图例按相区类型分组。同一类型内若该相图用了多个色调，则并排列出全部色块，
- * 避免图例只给一个色而画面上出现另一个色。
- */
-export function legendEntries(
-  regionPhases: string[][],
-): Array<{ category: RegionCategory; label: string; colors: string[] }> {
-  const grouped = new Map<RegionCategory, string[]>();
-  for (const phases of regionPhases) {
-    const category = regionCategory(phases);
-    const colors = grouped.get(category) ?? [];
-    const color = regionBaseColor(phases);
-    if (!colors.includes(color)) colors.push(color);
-    grouped.set(category, colors);
-  }
-  return CATEGORY_ORDER.filter((category) => grouped.has(category))
-    .map((category) => ({ category, label: CATEGORY_LABEL[category], colors: grouped.get(category) as string[] }));
 }
 
 /** 半透明填充下底色始终偏暗，相区标签统一用浅色字。 */

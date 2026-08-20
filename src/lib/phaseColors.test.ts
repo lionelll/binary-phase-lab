@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { diagrams } from '../data';
 import { buildRegionPolygon } from './geometry';
-import { hasExplicitColor, legendEntries, regionBaseColor, regionColor, REGION_FILL_ALPHA } from './phaseColors';
+import { hasExplicitColor, regionBaseColor, regionColor, REGION_FILL_ALPHA } from './phaseColors';
 
 /** 相区填充叠在绘图区底色上之后的实际观感色。 */
 const PLOT_BACKGROUND = [7, 17, 29];
@@ -53,14 +53,6 @@ describe('相区配色', () => {
           ),
         );
       }
-    }
-  });
-
-  it('图例覆盖该相图实际用到的每一种颜色', () => {
-    for (const diagram of diagrams) {
-      const used = new Set(diagram.regions.map((region) => regionBaseColor(region.phases)));
-      const listed = new Set(legendEntries(diagram.regions.map((region) => region.phases)).flatMap((item) => item.colors));
-      expect([...used].filter((color) => !listed.has(color))).toEqual([]);
     }
   });
 

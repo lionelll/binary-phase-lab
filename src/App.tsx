@@ -8,8 +8,6 @@ import { resolveDiagram, type DiagramId, type InvariantReaction, type ModuleId }
 import { useCooling } from './hooks/useCooling';
 import { evaluatePhaseState } from './lib/phaseState';
 
-const portalUrl=import.meta.env.VITE_PORTAL_URL||'http://123.57.11.145:8080/';
-
 export default function App(){
   const [diagramId,setDiagramId]=useState<DiagramId>('cu-ni');
   const diagram=resolveDiagram(diagramId);
@@ -27,7 +25,7 @@ export default function App(){
   const startCooling=()=>{if(document.activeElement instanceof HTMLElement)document.activeElement.blur();setModule('cooling');cooling.startNewRun()};
   const displayedState=coolingInvariant?{...state,kind:'invariant' as const,invariant:coolingInvariant,regionLabel:'三相平衡',phases:coolingInvariant.phaseCompositions.map(item=>item.phase),teaching:`${coolingInvariant.teaching} 三相共存时比例随反应进度变化，不存在唯一比例。`,equilibrium:coolingInvariant.phaseCompositions.map(item=>({...item,fraction:0}))}:state;
   return <div className="app-shell">
-    <header className="topbar"><div className="brand"><div className="brand-mark"><img src={brandLogo} alt=""/></div><div><h1>材科基 · 二元相图动态交互实验室</h1><span>畅研材料考研交流群：692990403</span></div></div><div className="top-actions"><a href={portalUrl}><Icon name="home"/><span>返回首页</span></a><button type="button" onClick={reset}><Icon name="reset"/><span>重置实验</span></button><button type="button" className={cooling.isCooling?'active':''} onClick={startCooling}><Icon name="play"/><span>自动凝固</span></button></div></header>
+    <header className="topbar"><div className="brand"><div className="brand-mark"><img src={brandLogo} alt=""/></div><div><h1>材科基 · 二元相图动态交互实验室</h1><span>畅研材料考研交流群：692990403</span></div></div><div className="top-actions"><button type="button" onClick={reset}><Icon name="reset"/><span>重置相图</span></button><button type="button" className={cooling.isCooling?'active':''} onClick={startCooling}><Icon name="play"/><span>自动凝固</span></button></div></header>
     <main className="workspace">
       <ControlPanel diagram={diagram} module={module} composition={composition} temperature={temperature} display={display} onDiagram={changeDiagram} onModule={setModule} onComposition={value=>setComposition(Math.min(diagram.compositionAxis.max,Math.max(diagram.compositionAxis.min,value)))} onTemperature={updateTemperature} onDisplay={setDisplay} onManualChange={manual} onPreset={(c,t)=>{manual();setComposition(c);updateTemperature(t)}}/>
       <section className="stage-column"><div className="stage-panel"><div className="stage-heading"><img src={brandLogo} alt=""/><div><strong>{diagram.title}</strong></div></div><div className="svg-host"><PhaseDiagramSvg diagram={diagram} state={displayedState} module={module} display={display} activeInvariant={coolingInvariant?.id??null} runStartTemperature={cooling.runStartTemperature} onManual={manual} onChange={(c,t)=>{setComposition(c);setTemperature(t)}}/></div><div className="stage-status"><span className={`status-dot ${cooling.isCooling?'running':''}`}/><strong>{cooling.isCooling?'正在自动凝固':'拖动红色状态点开始探索'}</strong><span>{composition.toFixed(diagram.compositionAxis.max<=10?3:1)}% · {Math.round(temperature)}℃ · {state.regionLabel}</span></div></div></section>

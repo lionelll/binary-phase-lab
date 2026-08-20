@@ -1,10 +1,12 @@
 import { useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
 import type { ModuleId, PhaseDiagramDefinition, PhaseState, Point } from '../data';
+import { compositionToNormalized, normalizedToComposition } from '../lib/compositionScale';
 import { buildRegionPolygon, sampleBoundary, temperatureAt } from '../lib/geometry';
-import { legendEntries, legendSwatchColor, regionColor } from '../lib/phaseColors';
+import { regionColor } from '../lib/phaseColors';
 import { numberedPresets } from '../lib/presets';
 import { isInvariantApplicable } from '../lib/phaseState';
 import type { DisplayOptions } from './ControlPanel';
+import { SvgPhaseNotation } from './PhaseNotation';
 
 const VIEW_W = 920, VIEW_H = 690;
 const M = { left: 92, right: 48, top: 58, bottom: 78 };
@@ -26,7 +28,7 @@ interface Props {
 
 export function PhaseDiagramSvg({ diagram, state, module, display, activeInvariant, runStartTemperature, onChange, onManual }: Props) {
   const svg = useRef<SVGSVGElement>(null);
-  const x = (value: number) => M.left + (value - diagram.compositionAxis.min) / (diagram.compositionAxis.max - diagram.compositionAxis.min) * W;
+  const x = (value: number) => M.left + compositionToNormalized(diagram.compositionAxis, value) * W;
   const y = (value: number) => M.top + (diagram.temperatureAxis.max - value) / (diagram.temperatureAxis.max - diagram.temperatureAxis.min) * H;
   const fromScreen = (clientX: number, clientY: number) => {
     const node = svg.current; if (!node) return null;
@@ -35,7 +37,7 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
     const local = point.matrixTransform(matrix);
     return {
       localY: local.y,
-      composition: diagram.compositionAxis.min + (local.x - M.left) / W * (diagram.compositionAxis.max - diagram.compositionAxis.min),
+      composition: normalizedToComposition(diagram.compositionAxis, (local.x - M.left) / W),
       temperature: diagram.temperatureAxis.max - (local.y - M.top) / H * (diagram.temperatureAxis.max - diagram.temperatureAxis.min),
     };
   };
@@ -80,17 +82,6 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
     );
   };
   const tie = useMemo(() => state.equilibrium.length === 2 ? state.equilibrium.map((item) => item.composition) : [], [state.equilibrium]);
-  const legend = useMemo(() => legendEntries(diagram.regions.map((region) => region.phases)), [diagram]);
-  // 每条图例的宽度随色块数量与文字长度变化，逐条累加起始位置，避免固定间距下互相压字。
-  const legendOffsets = useMemo(() => {
-    const offsets: Record<string, number> = {};
-    let cursor = 0;
-    for (const item of legend) {
-      offsets[item.category] = cursor;
-      cursor += item.colors.length * 18 + item.label.length * 10 + 22;
-    }
-    return offsets;
-  }, [legend]);
   const presets = useMemo(() => numberedPresets(diagram.presets), [diagram]);
   const coolingStart = runStartTemperature ?? diagram.temperatureAxis.max;
   const coolingNodes = useMemo(() => {
@@ -189,31 +180,21 @@ export function PhaseDiagramSvg({ diagram, state, module, display, activeInvaria
     {display.constituents && diagram.constituents?.map((item) => {
       const anchorX = x(item.anchor[0]), anchorY = y(item.anchor[1]);
       const textX = anchorX + (item.offset?.dx ?? 0), textY = anchorY + (item.offset?.dy ?? 0);
-      return <g key={item.id}>{item.offset && <line className="region-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className="constituent-label" x={textX} y={textY}>{item.text}</text></g>;
+      return <g key={item.id}>{item.offset && <line className="region-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className="constituent-label" x={textX} y={textY}><SvgPhaseNotation text={item.text}/></text></g>;
     })}
     {display.labels && diagram.regions.map((region) => {
       const anchorX = x(region.labelAnchor[0]), anchorY = y(region.labelAnchor[1]);
       const textX = anchorX + (region.labelOffset?.dx ?? 0), textY = anchorY + (region.labelOffset?.dy ?? 0);
-      return <g key={region.id}>{region.labelOffset && <line className="region-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className={`region-label ${region.id === state.regionId ? 'active' : ''}`} x={textX} y={textY}>{region.label}</text></g>;
+      return <g key={region.id}>{region.labelOffset && <line className="region-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className={`region-label ${region.id === state.regionId ? 'active' : ''}`} x={textX} y={textY}><SvgPhaseNotation text={region.label}/></text></g>;
     })}
     {display.labels && diagram.annotations?.map((annotation) => {
       const anchorX = x(annotation.anchor[0]), anchorY = y(annotation.anchor[1]);
       const textX = anchorX + (annotation.offset?.dx ?? 0), textY = anchorY + (annotation.offset?.dy ?? 0);
-      return <g key={annotation.id}>{annotation.leader && <line className="annotation-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className="diagram-annotation" x={textX} y={textY}>{annotation.text}</text></g>;
+      return <g key={annotation.id}>{annotation.leader && <line className="annotation-leader" x1={anchorX} y1={anchorY} x2={textX} y2={textY}/>}<text className="diagram-annotation" x={textX} y={textY}><SvgPhaseNotation text={annotation.text}/></text></g>;
     })}
     {display.keyPoints && diagram.keyPoints.map((point) => <g className="key-point" key={`${point.label}-${point.composition}`}><circle className="key-point-hit" cx={x(point.composition)} cy={y(point.temperature)} r="11" tabIndex={0} role="button" aria-label={`跳到关键点 ${point.label}`} onPointerDown={(event) => { event.stopPropagation(); jumpTo(point.composition, point.temperature); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); jumpTo(point.composition, point.temperature); } }}/><circle cx={x(point.composition)} cy={y(point.temperature)} r="3"/>{((point.dx ?? 0) > 10 || Math.abs(point.dy ?? 0) > 20) ? <line className="key-leader" x1={x(point.composition)} y1={y(point.temperature)} x2={x(point.composition) + (point.dx ?? 5) - 3} y2={y(point.temperature) + (point.dy ?? -8) + 3}/> : null}<text x={x(point.composition) + (point.dx ?? 5)} y={y(point.temperature) + (point.dy ?? -8)}>{point.label}</text></g>)}
     {diagram.invariants.map((reaction) => module === 'invariant' || activeInvariant === reaction.id ? <g className="invariant-points" key={`${reaction.id}-points`}>{[reaction.points.left, reaction.points.middle, reaction.points.right].map((composition, index) => <g key={composition}><circle className="key-point-hit" cx={x(composition)} cy={y(reaction.temperature)} r="11" tabIndex={0} role="button" aria-label={`跳到 ${reaction.equation} 的 ${composition}% 特征点`} onPointerDown={(event) => { event.stopPropagation(); jumpTo(composition, reaction.temperature); }} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); jumpTo(composition, reaction.temperature); } }}/><circle cx={x(composition)} cy={y(reaction.temperature)} r={index === 1 ? 6 : 4}/></g>)}</g> : null)}
 
-    <g className="phase-legend">{legend.map((item) => {
-      const offset = legendOffsets[item.category];
-      return <g key={item.category} transform={`translate(${M.left + offset} 8)`}>
-        {item.colors.map((color, swatch) => <g key={color} transform={`translate(${swatch * 18} 0)`}>
-          <rect className="legend-swatch-bg" width="15" height="11" rx="2"/>
-          <rect width="15" height="11" rx="2" fill={legendSwatchColor(color)}/>
-        </g>)}
-        <text x={item.colors.length * 18 + 5} y="10">{item.label}</text>
-      </g>;
-    })}</g>
     <g className="preset-marks">{presets.map((preset) => {
       const px = x(preset.composition);
       return <g key={preset.id}>

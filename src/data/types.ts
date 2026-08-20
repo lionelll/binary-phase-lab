@@ -1,5 +1,5 @@
 export type DiagramId = 'cu-ni' | 'pt-ag' | 'pb-sn' | 'fe-c';
-export type ModuleId = 'structure' | 'cooling' | 'lever' | 'invariant' | 'microstructure';
+export type ModuleId = 'structure' | 'cooling' | 'lever' | 'invariant';
 
 export type ControlPoint = readonly [composition: number, temperature: number];
 
@@ -106,6 +106,8 @@ export interface AxisDefinition {
   max: number;
   ticks: number[];
   label: string;
+  /** 可选分段比例尺；position 为绘图区内 0–1 的归一化位置。 */
+  scaleStops?: Array<{ value: number; position: number }>;
 }
 
 export interface KeyPoint {

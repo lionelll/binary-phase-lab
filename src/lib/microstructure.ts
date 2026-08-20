@@ -1,5 +1,6 @@
 import type { PhaseDiagramDefinition } from '../data/types';
 import { temperatureAt } from './geometry';
+import { evaluatePhaseState, isInvariantApplicable } from './phaseState';
 
 /**
  * 显微组织判定。
@@ -17,6 +18,18 @@ export interface Microstructure {
   name: string;
   /** 组织形成过程 */
   formation: string;
+}
+
+export interface MicrostructureFraction {
+  /** 组织组成物名称，而不是相名。 */
+  name: string;
+  /** 占全部显微组织的质量百分数。 */
+  fraction: number;
+}
+
+export interface MicrostructureFractions {
+  items: MicrostructureFraction[];
+  note: string;
 }
 
 /** 判定「正处于三相反应温度」的带宽，取温度轴跨度的 0.4%，使拖动可及。 */
@@ -264,4 +277,130 @@ export function describeMicrostructure(
     case 'fe-c': return ironCarbon(diagram, c, T);
     default: return null;
   }
+}
+
+const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
+
+function normalized(items: MicrostructureFraction[], note: string): MicrostructureFractions {
+  const valid = items
+    .filter((item) => Number.isFinite(item.fraction) && item.fraction > 0.005)
+    .map((item) => ({ ...item, fraction: clampPercent(item.fraction) }));
+  const total = valid.reduce((sum, item) => sum + item.fraction, 0);
+  if (total <= 0) return { items: [], note };
+  return {
+    items: valid.map((item) => ({ ...item, fraction: item.fraction * 100 / total })),
+    note,
+  };
+}
+
+function phaseConstituentName(diagram: PhaseDiagramDefinition, phase: string): string {
+  if (phase === 'L') return '液相';
+  if (diagram.id === 'fe-c') {
+    if (phase === 'α') return '铁素体';
+    if (phase === 'γ') return '奥氏体';
+    if (phase === 'δ') return 'δ铁素体';
+    if (phase === 'Fe₃C') return '渗碳体';
+  }
+  if (phase === 'α') return 'α固溶体';
+  if (phase === 'β') return 'β固溶体';
+  return phase;
+}
+
+function equilibriumFractions(
+  diagram: PhaseDiagramDefinition,
+  composition: number,
+  temperature: number,
+  note = '当前未跨越形成独立组织组成物的不变量反应，比例按此温度下的平衡相含量显示。',
+): MicrostructureFractions {
+  const state = evaluatePhaseState(diagram, composition, temperature);
+  return normalized(
+    state.equilibrium.map((item) => ({
+      name: phaseConstituentName(diagram, item.phase),
+      fraction: item.fraction,
+    })),
+    note,
+  );
+}
+
+/**
+ * 计算当前冷却路径上的组织组成物比例。
+ *
+ * 液/固两相区直接沿用实时杠杆定律；共晶、共析和铸铁凝固后的比例，
+ * 则在对应不变量温度处按组织组成物重新应用杠杆定律。反应温度带内
+ * 三相比例取决于反应进度，因此明确返回空数组，禁止显示虚假的唯一值。
+ */
+export function describeMicrostructureFractions(
+  diagram: PhaseDiagramDefinition,
+  composition: number,
+  temperature: number,
+): MicrostructureFractions {
+  const c = Math.min(diagram.compositionAxis.max, Math.max(diagram.compositionAxis.min, composition));
+  const T = Math.min(diagram.temperatureAxis.max, Math.max(diagram.temperatureAxis.min, temperature));
+  const activeReaction = diagram.invariants.find((reaction) =>
+    Math.abs(T - reaction.temperature) <= reactionBand(diagram) && isInvariantApplicable(reaction, c));
+  if (activeReaction) {
+    return { items: [], note: '三相反应进行中，组织比例随反应进度变化，不存在唯一值。' };
+  }
+
+  if (diagram.id === 'pb-sn') {
+    const reaction = diagram.invariants[0];
+    const { left, middle, right } = reaction.points;
+    if (T < reaction.temperature - reactionBand(diagram) && c >= left && c <= right) {
+      if (c <= middle) {
+        const primary = (middle - c) / (middle - left) * 100;
+        return normalized([
+          { name: '初生α相', fraction: primary },
+          { name: '（α+β）共晶组织', fraction: 100 - primary },
+        ], '按共晶温度处的杠杆关系估算；后续二次析出相计入对应基体组织。');
+      }
+      const primary = (c - middle) / (right - middle) * 100;
+      return normalized([
+        { name: '初生β相', fraction: primary },
+        { name: '（α+β）共晶组织', fraction: 100 - primary },
+      ], '按共晶温度处的杠杆关系估算；后续二次析出相计入对应基体组织。');
+    }
+  }
+
+  if (diagram.id === 'fe-c') {
+    const [, eutecticReaction, eutectoidReaction] = diagram.invariants;
+    const cP = 0.0218;
+    const cS = 0.77;
+    const cE = 2.11;
+    const cC = 4.30;
+    const cFe3C = 6.69;
+    const belowEutectoid = T < eutectoidReaction.temperature - reactionBand(diagram);
+    const belowEutectic = T < eutecticReaction.temperature - reactionBand(diagram);
+
+    if (belowEutectoid && c >= cP && c <= cE) {
+      if (c <= cS) {
+        const ferrite = (cS - c) / (cS - cP) * 100;
+        return normalized([
+          { name: '先共析铁素体', fraction: ferrite },
+          { name: '珠光体', fraction: 100 - ferrite },
+        ], '按共析温度处的杠杆关系估算组织组成物含量。');
+      }
+      const pearlite = (cFe3C - c) / (cFe3C - cS) * 100;
+      return normalized([
+        { name: '珠光体', fraction: pearlite },
+        { name: '二次渗碳体（Fe₃CⅡ）', fraction: 100 - pearlite },
+      ], '按共析温度处的杠杆关系估算组织组成物含量。');
+    }
+
+    if (belowEutectic && c > cE) {
+      if (c <= cC) {
+        const primary = (cC - c) / (cC - cE) * 100;
+        return normalized([
+          { name: belowEutectoid ? '初生奥氏体转变组织' : '初生奥氏体', fraction: primary },
+          { name: belowEutectoid ? '低温莱氏体（Ld′）' : '莱氏体（Ld）', fraction: 100 - primary },
+        ], '按共晶温度处的杠杆关系估算；低于共析温度后，奥氏体转变后的产物计入原组织组成物。');
+      }
+      const cementite = (c - cC) / (cFe3C - cC) * 100;
+      return normalized([
+        { name: '一次渗碳体（Fe₃CⅠ）', fraction: cementite },
+        { name: belowEutectoid ? '低温莱氏体（Ld′）' : '莱氏体（Ld）', fraction: 100 - cementite },
+      ], '按共晶温度处的杠杆关系估算组织组成物含量。');
+    }
+  }
+
+  return equilibriumFractions(diagram, c, T);
 }

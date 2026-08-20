@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type Reac
 import { ChartSpline } from 'lucide-react';
 import { diagrams, type DiagramId, type ModuleId, type PhaseDiagramDefinition } from '../data';
 import { formatNumericValue, parseCommittedNumber } from '../lib/numericInput';
-import { describeMicrostructure } from '../lib/microstructure';
 import { numberedPresets } from '../lib/presets';
 import { Icon, type IconName } from './Icons';
 
@@ -24,11 +23,8 @@ interface Props {
 }
 
 const modules: Array<{ id: ModuleId; label: string; icon: IconName }> = [
-  { id: 'structure', label: '相图结构', icon: 'diagram' },
-  { id: 'cooling', label: '冷却过程', icon: 'cooling' },
   { id: 'lever', label: '杠杆定律', icon: 'lever' },
   { id: 'invariant', label: '三相反应', icon: 'reaction' },
-  { id: 'microstructure', label: '金相显微组织', icon: 'micro' },
 ];
 
 function number(value: number, max: number) { return formatNumericValue(value, max); }
@@ -94,19 +90,17 @@ export function ControlPanel(props: Props) {
         ))}
       </div>
     </>}</CollapsiblePanel>
+    {diagram.presets && <CollapsiblePanel id="panel-presets" title="典型合金预设" className="preset-panel">{(collapseOnMobile) =>
+      <div className="preset-block"><div className="preset-list">{numberedPresets(diagram.presets).map((preset) => (
+        <button type="button" className="preset-chip" key={preset.id}
+          onClick={() => { props.onPreset(preset.composition, preset.temperature); collapseOnMobile(); }}>
+          <span className="preset-mark">{preset.mark}</span>{preset.label}
+        </button>
+      ))}</div></div>
+    }</CollapsiblePanel>}
     <CollapsiblePanel id="panel-modules" title="功能模块" className="module-panel">{(collapseOnMobile) =>
       <div className="module-list">{modules.map((item) => <button type="button" className={`module-row ${props.module === item.id ? 'active' : ''}`} key={item.id} onClick={() => { props.onModule(item.id); collapseOnMobile(); }}><Icon name={item.icon}/><span>{item.label}</span></button>)}</div>
     }</CollapsiblePanel>
-    {props.module === 'microstructure' && (() => {
-      const micro = describeMicrostructure(diagram, props.composition, props.temperature);
-      return <section className="panel micro-card"><div className="panel-heading"><span>金相显微组织</span></div><div className="micro-content">
-        {micro ? <>
-          <span className="micro-label">冷却阶段</span><em className="micro-stage">{micro.stage}</em>
-          <span className="micro-label">当前显微组织</span><strong>{micro.name}</strong>
-          <span className="micro-label">组织形成过程</span><p>{micro.formation}</p>
-        </> : <p className="micro-empty">该相图暂未提供显微组织判定。</p>}
-      </div></section>;
-    })()}
     <CollapsiblePanel id="panel-parameters" title="实验参数" className="parameter-panel">
       <div className="control-stack">
         <label className="control-block"><span>合金成分 <b>{number(props.composition, diagram.compositionAxis.max)}%</b></span><div className="input-pair"><input aria-label="合金成分滑块" type="range" min={diagram.compositionAxis.min} max={diagram.compositionAxis.max} step={diagram.compositionAxis.max <= 10 ? .001 : .1} value={props.composition} onChange={(event) => {props.onManualChange();props.onComposition(Number(event.target.value));}}/><NumericField label="合金成分数值" value={props.composition} min={diagram.compositionAxis.min} max={diagram.compositionAxis.max} step={diagram.compositionAxis.max <= 10 ? .001 : .1} formatMax={diagram.compositionAxis.max} onCommit={(value) => { props.onManualChange(); props.onComposition(value); }}/></div><small>{diagram.components.left} ← {diagram.compositionAxis.label} → {diagram.components.right}</small></label>
@@ -121,15 +115,6 @@ export function ControlPanel(props: Props) {
         else if (key === 'constituents') props.onDisplay({ ...props.display, constituents: checked, labels: checked ? false : props.display.labels });
         else props.onDisplay({ ...props.display, [key]: checked });
       }}/><span className="fake-check"/><span>{label}</span></label>)}
-    {diagram.presets && <div className="preset-block">
-      <span className="preset-title">典型合金预设</span>
-      <div className="preset-list">{numberedPresets(diagram.presets).map((preset) => (
-        <button type="button" className="preset-chip" key={preset.id}
-          onClick={() => props.onPreset(preset.composition, preset.temperature)}>
-          <span className="preset-mark">{preset.mark}</span>{preset.label}
-        </button>
-      ))}</div>
-    </div>}
     </div></CollapsiblePanel>
   </aside>;
 }
