@@ -25,8 +25,8 @@ export const feC: PhaseDiagramDefinition = {
     {id:'liquid-gamma',label:'L + γ',phases:['L','γ'],labelAnchor:[1.682,1316],teaching:'液相与 γ 奥氏体平衡共存。',tieLine:{left:{phase:'γ',boundaryId:'gamma-solidus'},right:{phase:'L',boundaryId:'liquidus-gamma'}},outline:[{type:'boundary',boundaryId:'liquidus-gamma'},{type:'line',points:[[4.3,1148],[2.11,1148]]},{type:'boundary',boundaryId:'gamma-solidus',reverse:true},{type:'line',points:[[0.17,1495],[0.53,1495]]}]},
     {id:'liquid-cementite',label:'L + Fe₃C',phases:['L','Fe₃C'],labelAnchor:[5.77,1159],teaching:'液相与渗碳体平衡共存。',tieLine:{left:{phase:'L',boundaryId:'liquidus-cementite'},right:{phase:'Fe₃C',boundaryId:'cementite'}},outline:[{type:'boundary',boundaryId:'liquidus-cementite'},{type:'line',points:[[6.69,1227],[6.69,1148],[4.3,1148]]}]},
     {id:'gamma',label:'γ',phases:['γ'],labelAnchor:[1.1,1050],teaching:'γ 奥氏体单相区，碳在面心立方铁中的间隙固溶度较高。',outline:[{type:'boundary',boundaryId:'gamma-delta'},{type:'boundary',boundaryId:'gamma-solidus'},{type:'boundary',boundaryId:'acm',reverse:true},{type:'boundary',boundaryId:'a3',reverse:true},{type:'line',points:[[0,912],[0,1394]]}]},
-    {id:'alpha-gamma',label:'α + γ',phases:['α','γ'],labelAnchor:[0.18,800],teaching:'铁素体与奥氏体两相平衡共存。',tieLine:{left:{phase:'α',boundaryId:'gp'},right:{phase:'γ',boundaryId:'a3'}},outline:[{type:'boundary',boundaryId:'gp'},{type:'line',points:[[0.0218,727],[0.77,727]]},{type:'boundary',boundaryId:'a3',reverse:true}]},
-    {id:'alpha',label:'α',phases:['α'],labelAnchor:[0.004,800],labelOffset:{dx:32,dy:18},teaching:'低碳 α 铁素体单相区，碳固溶度很低。',outline:[{type:'boundary',boundaryId:'gp'},{type:'boundary',boundaryId:'alpha-solvus',reverse:true},{type:'line',points:[[0.008,600],[0,600],[0,912]]}]},
+    {id:'alpha-gamma',label:'α + γ',phases:['α','γ'],labelAnchor:[0.27,790],teaching:'铁素体与奥氏体两相平衡共存。',tieLine:{left:{phase:'α',boundaryId:'gp'},right:{phase:'γ',boundaryId:'a3'}},outline:[{type:'boundary',boundaryId:'gp'},{type:'line',points:[[0.0218,727],[0.77,727]]},{type:'boundary',boundaryId:'a3',reverse:true}]},
+    {id:'alpha',label:'α',phases:['α'],labelAnchor:[0.004,800],labelOffset:{dx:32,dy:32},teaching:'低碳 α 铁素体单相区，碳固溶度很低。',outline:[{type:'boundary',boundaryId:'gp'},{type:'boundary',boundaryId:'alpha-solvus',reverse:true},{type:'line',points:[[0.008,600],[0,600],[0,912]]}]},
     {id:'gamma-cementite',label:'γ + Fe₃C',phases:['γ','Fe₃C'],labelAnchor:[3.6,930],teaching:'奥氏体与渗碳体两相共存，可由 Acm 线和 Fe₃C 端点应用杠杆定律。',tieLine:{left:{phase:'γ',boundaryId:'acm'},right:{phase:'Fe₃C',boundaryId:'cementite'}},outline:[{type:'boundary',boundaryId:'acm'},{type:'line',points:[[2.11,1148],[6.69,1148],[6.69,727],[0.77,727]]}]},
     {id:'alpha-cementite',label:'α + Fe₃C',phases:['α','Fe₃C'],labelAnchor:[3.2,665],teaching:'共析温度以下铁素体与渗碳体两相共存。',tieLine:{left:{phase:'α',boundaryId:'alpha-solvus'},right:{phase:'Fe₃C',boundaryId:'cementite'}},outline:[{type:'boundary',boundaryId:'alpha-solvus'},{type:'line',points:[[0.0218,727],[6.69,727],[6.69,600],[0.008,600]]}]},
   ],
@@ -38,7 +38,7 @@ export const feC: PhaseDiagramDefinition = {
   keyPoints:[
     {label:'H 0.09',composition:0.09,temperature:1495,dx:12,dy:-26},{label:'J 0.17',composition:0.17,temperature:1495,dx:27,dy:26},{label:'B 0.53',composition:0.53,temperature:1495,dx:15,dy:1},
     {label:'E 2.11',composition:2.11,temperature:1148,dx:-45,dy:2},{label:'C 4.30',composition:4.3,temperature:1148,dx:-20,dy:20},{label:'S 0.77',composition:0.77,temperature:727,dx:5,dy:20},
-    {label:'G',composition:0,temperature:912,dx:12,dy:-10},{label:'N',composition:0,temperature:1394,dx:12,dy:18},{label:'P 0.0218',composition:0.0218,temperature:727,dx:14,dy:36},{label:'D 6.69',composition:6.69,temperature:1227,dx:-58,dy:-10},
+    {label:'G',composition:0,temperature:912,dx:12,dy:-10},{label:'N',composition:0,temperature:1394,dx:12,dy:18},{label:'P 0.0218',composition:0.0218,temperature:727,dx:80,dy:-18},{label:'D 6.69',composition:6.69,temperature:1227,dx:-58,dy:-10},
   ],
   annotations:[{id:'cementite-label',kind:'phase',text:'Fe₃C',anchor:[6.69,880],offset:{dx:-34,dy:0},leader:true}],
   // 金相形貌视角：组织组成物分区。Ld 为莱氏体、Ld′ 为低温莱氏体，
@@ -62,7 +62,7 @@ export const feC: PhaseDiagramDefinition = {
     {id:'c-ld-fe3c1',text:'Ld + Fe₃CⅠ',anchor:[5.5,950]},
     {id:'c-ferrite',text:'F',anchor:[0.01,690],offset:{dx:30,dy:-4}},
     {id:'c-f-fe3c3',text:'F + Fe₃CⅢ',anchor:[0.01,620],offset:{dx:75,dy:-20}},
-    {id:'c-f-p',text:'F + P',anchor:[0.45,628]},
+    {id:'c-f-p',text:'F + P',anchor:[0.45,610]},
     {id:'c-p-fe3c2',text:'P + Fe₃CⅡ',anchor:[1.44,663]},
     {id:'c-p-fe3c2-ld',text:'P + Fe₃CⅡ + Ld′',anchor:[3.2,663]},
     {id:'c-ld-fe3c1-low',text:'Ld′ + Fe₃CⅠ',anchor:[5.5,663]},

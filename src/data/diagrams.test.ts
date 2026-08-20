@@ -93,6 +93,13 @@ describe('phase diagram catalog', () => {
     expect(liquidusMidpoint - solidusMidpoint).toBeCloseTo(185 * 0.7, 2);
     // 两条曲线对称收窄，不单方面挤压液相区或固相区。
     expect((liquidusMidpoint + solidusMidpoint) / 2).toBeCloseTo(endpointChordMidpoint, 2);
+    // L + α 标签必须位于透镜中部，与上下相界都留有足够文字空间。
+    const liquidAlpha = cuNi.regions.find((region) => region.id === 'liquid-alpha')!;
+    const [labelComposition, labelTemperature] = liquidAlpha.labelAnchor;
+    const labelLiquidus = temperatureAt(liquidusBoundary, labelComposition)!;
+    const labelSolidus = temperatureAt(solidusBoundary, labelComposition)!;
+    expect(labelLiquidus - labelTemperature).toBeGreaterThan(40);
+    expect(labelTemperature - labelSolidus).toBeGreaterThan(40);
     // 透镜必须闭合于两纯组元端点，且中间处处张开
     for (let index = 1; index < 200; index += 1) {
       const composition = 100 * index / 200;
@@ -145,6 +152,56 @@ describe('phase diagram catalog', () => {
     expect(label?.text).toBe('F + Fe₃CⅢ');
     expect(regionAt(feC, label!.anchor[0], label!.anchor[1])?.id).toBe('alpha-cementite');
     expect(compositionToNormalized(feC.compositionAxis, 0.0218)).toBeCloseTo(0.0218 / 6.69, 10);
+  });
+
+  it('keeps the Fe-C P key-point text clear of every constituent label', () => {
+    type TextBox = { left:number; right:number; top:number; bottom:number };
+    const x = (composition:number) => 92 + compositionToNormalized(feC.compositionAxis, composition) * 780;
+    const y = (temperature:number) => 58 + (1600 - temperature) / 1000 * 554;
+    const box = (centerX:number, baselineY:number, text:string, fontSize=11):TextBox => {
+      const width = text.length * fontSize * 0.62;
+      return { left:centerX - width / 2, right:centerX + width / 2, top:baselineY - fontSize, bottom:baselineY + fontSize * 0.3 };
+    };
+    const intersects = (a:TextBox,b:TextBox) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    const p = feC.keyPoints.find((point) => point.label.startsWith('P '))!;
+    const pBox = box(x(p.composition) + (p.dx ?? 0), y(p.temperature) + (p.dy ?? 0), p.label);
+    for (const label of feC.constituents ?? []) {
+      const labelBox = box(
+        x(label.anchor[0]) + (label.offset?.dx ?? 0),
+        y(label.anchor[1]) + (label.offset?.dy ?? 0),
+        label.text,
+      );
+      expect(intersects(pBox, labelBox), `P 点文字与 ${label.text} 重叠`).toBe(false);
+    }
+  });
+
+  it('keeps every Fe-C constituent label clear of the other constituent labels', () => {
+    type TextBox = { left:number; right:number; top:number; bottom:number };
+    const x = (composition:number) => 92 + compositionToNormalized(feC.compositionAxis, composition) * 780;
+    const y = (temperature:number) => 58 + (1600 - temperature) / 1000 * 554;
+    const box = (centerX:number, baselineY:number, text:string):TextBox => {
+      const fontSize = 13;
+      const width = text.length * fontSize * 0.62;
+      return { left:centerX - width / 2, right:centerX + width / 2, top:baselineY - fontSize, bottom:baselineY + fontSize * 0.3 };
+    };
+    const intersects = (a:TextBox,b:TextBox) => a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    const labels = (feC.constituents ?? []).map((label) => ({
+      label,
+      box:box(
+        x(label.anchor[0]) + (label.offset?.dx ?? 0),
+        y(label.anchor[1]) + (label.offset?.dy ?? 0),
+        label.text,
+      ),
+    }));
+
+    for (let left = 0; left < labels.length; left += 1) {
+      for (let right = left + 1; right < labels.length; right += 1) {
+        expect(
+          intersects(labels[left].box, labels[right].box),
+          `${labels[left].label.text} 与 ${labels[right].label.text} 重叠`,
+        ).toBe(false);
+      }
+    }
   });
 
   it('classifies invariant states before regions and does not invent fractions', () => {

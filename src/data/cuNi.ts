@@ -26,7 +26,7 @@ export const cuNi: PhaseDiagramDefinition = {
       outline: [{ type: 'boundary', boundaryId: 'liquidus' }, { type: 'line', points: [[100, 1550], [0, 1550]] }],
     },
     {
-      id: 'liquid-alpha', label: 'L + α', phases: ['L', 'α'], labelAnchor: [53, 1330], teaching: '液相与 α 固溶体平衡共存。等温线两端分别给出液相和固相成分。',
+      id: 'liquid-alpha', label: 'L + α', phases: ['L', 'α'], labelAnchor: [53, 1280], teaching: '液相与 α 固溶体平衡共存。等温线两端分别给出液相和固相成分。',
       tieLine: { left: { phase: 'L', boundaryId: 'liquidus' }, right: { phase: 'α', boundaryId: 'solidus' } },
       outline: [{ type: 'boundary', boundaryId: 'liquidus' }, { type: 'boundary', boundaryId: 'solidus', reverse: true }],
     },
