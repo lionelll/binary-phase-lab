@@ -1,5 +1,5 @@
 import type { PhaseDiagramDefinition } from '../data/types';
-import { temperatureAt } from './geometry';
+import { compositionsAt, temperatureAt } from './geometry';
 import { evaluatePhaseState, isInvariantApplicable } from './phaseState';
 
 /**
@@ -283,7 +283,7 @@ const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
 
 function normalized(items: MicrostructureFraction[], note: string): MicrostructureFractions {
   const valid = items
-    .filter((item) => Number.isFinite(item.fraction) && item.fraction > 0.005)
+    .filter((item) => Number.isFinite(item.fraction) && item.fraction > 1e-9)
     .map((item) => ({ ...item, fraction: clampPercent(item.fraction) }));
   const total = valid.reduce((sum, item) => sum + item.fraction, 0);
   if (total <= 0) return { items: [], note };
@@ -306,6 +306,53 @@ function phaseConstituentName(diagram: PhaseDiagramDefinition, phase: string): s
   return phase;
 }
 
+/** 按最外层的加号拆分组织名称；括号内的“α+β”等组合保持完整。 */
+export function splitMicrostructureName(name: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < name.length; index += 1) {
+    const character = name[index];
+    if (character === '(' || character === '（') depth += 1;
+    if (character === ')' || character === '）') depth = Math.max(0, depth - 1);
+    if (character === '+' && depth === 0) {
+      parts.push(name.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  parts.push(name.slice(start).trim());
+  return parts.filter(Boolean);
+}
+
+function currentNameForPhase(
+  diagram: PhaseDiagramDefinition,
+  phase: string,
+  microstructure: Microstructure | null,
+): string {
+  const components = microstructure ? splitMicrostructureName(microstructure.name) : [];
+  const includes = (pattern: RegExp) => components.find((item) => pattern.test(item));
+  const matched = phase === 'L'
+    ? includes(/(^L$|^L\s|液相)/u)
+    : phase === 'Fe₃C'
+      ? includes(/(Fe₃C|渗碳体)/u)
+      : phase === 'γ'
+        ? includes(/(奥氏体|^A(?:\s|$|（))/u)
+        : phase === 'δ'
+          ? includes(/δ/u)
+          : phase === 'α'
+            ? includes(diagram.id === 'fe-c' ? /铁素体/u : /α/u)
+            : phase === 'β'
+              ? includes(/β/u)
+              : undefined;
+  return matched ?? phaseConstituentName(diagram, phase);
+}
+
+const compositionAtTemperature = (
+  diagram: PhaseDiagramDefinition,
+  boundaryId: string,
+  temperature: number,
+) => compositionsAt(diagram.boundaries.find((item) => item.id === boundaryId)!, temperature)[0] ?? null;
+
 function equilibriumFractions(
   diagram: PhaseDiagramDefinition,
   composition: number,
@@ -313,9 +360,10 @@ function equilibriumFractions(
   note = '当前未跨越形成独立组织组成物的不变量反应，比例按此温度下的平衡相含量显示。',
 ): MicrostructureFractions {
   const state = evaluatePhaseState(diagram, composition, temperature);
+  const microstructure = describeMicrostructure(diagram, composition, temperature);
   return normalized(
     state.equilibrium.map((item) => ({
-      name: phaseConstituentName(diagram, item.phase),
+      name: currentNameForPhase(diagram, item.phase, microstructure),
       fraction: item.fraction,
     })),
     note,
@@ -346,18 +394,27 @@ export function describeMicrostructureFractions(
     const reaction = diagram.invariants[0];
     const { left, middle, right } = reaction.points;
     if (T < reaction.temperature - reactionBand(diagram) && c >= left && c <= right) {
+      if (Math.abs(c - middle) < 0.6) {
+        return { items: [{ name: '（α+β）共晶组织', fraction: 100 }], note: '共晶成分全部形成（α+β）共晶组织。' };
+      }
+      const alphaAtT = compositionAtTemperature(diagram, 'alpha-solvus', T) ?? left;
+      const betaAtT = compositionAtTemperature(diagram, 'beta-solvus', T) ?? right;
       if (c <= middle) {
         const primary = (middle - c) / (middle - left) * 100;
+        const primaryAlpha = primary * (betaAtT - left) / (betaAtT - alphaAtT);
         return normalized([
-          { name: '初生α相', fraction: primary },
+          { name: '初生α相', fraction: primaryAlpha },
           { name: '（α+β）共晶组织', fraction: 100 - primary },
-        ], '按共晶温度处的杠杆关系估算；后续二次析出相计入对应基体组织。');
+          { name: 'βⅡ', fraction: primary - primaryAlpha },
+        ], '初生组织与共晶组织按共晶温度杠杆关系计算；二次相按当前温度溶解度线进一步分配。');
       }
       const primary = (c - middle) / (right - middle) * 100;
+      const primaryBeta = primary * (right - alphaAtT) / (betaAtT - alphaAtT);
       return normalized([
-        { name: '初生β相', fraction: primary },
+        { name: '初生β相', fraction: primaryBeta },
         { name: '（α+β）共晶组织', fraction: 100 - primary },
-      ], '按共晶温度处的杠杆关系估算；后续二次析出相计入对应基体组织。');
+        { name: 'αⅡ', fraction: primary - primaryBeta },
+      ], '初生组织与共晶组织按共晶温度杠杆关系计算；二次相按当前温度溶解度线进一步分配。');
     }
   }
 
@@ -375,24 +432,36 @@ export function describeMicrostructureFractions(
       if (c <= cS) {
         const ferrite = (cS - c) / (cS - cP) * 100;
         return normalized([
-          { name: '先共析铁素体', fraction: ferrite },
+          { name: '铁素体', fraction: ferrite },
           { name: '珠光体', fraction: 100 - ferrite },
         ], '按共析温度处的杠杆关系估算组织组成物含量。');
       }
       const pearlite = (cFe3C - c) / (cFe3C - cS) * 100;
       return normalized([
         { name: '珠光体', fraction: pearlite },
-        { name: '二次渗碳体（Fe₃CⅡ）', fraction: 100 - pearlite },
+        { name: '二次渗碳体', fraction: 100 - pearlite },
       ], '按共析温度处的杠杆关系估算组织组成物含量。');
     }
 
     if (belowEutectic && c > cE) {
-      if (c <= cC) {
-        const primary = (cC - c) / (cC - cE) * 100;
+      const hypo = c < cC - 0.05;
+      const hyper = c > cC + 0.05;
+      if (!hypo && !hyper) {
+        return { items: [{ name: belowEutectoid ? '低温莱氏体（Ld′）' : '莱氏体（Ld）', fraction: 100 }], note: '共晶成分全部形成莱氏体组织。' };
+      }
+      if (hypo) {
+        const primaryAtEutectic = (cC - c) / (cC - cE) * 100;
+        const ledeburite = 100 - primaryAtEutectic;
+        const gammaAtT = belowEutectoid
+          ? cS
+          : compositionAtTemperature(diagram, 'acm', T) ?? cS;
+        const secondaryCementite = primaryAtEutectic * (cE - gammaAtT) / (cFe3C - gammaAtT);
+        const transformedPrimary = primaryAtEutectic - secondaryCementite;
         return normalized([
-          { name: belowEutectoid ? '初生奥氏体转变组织' : '初生奥氏体', fraction: primary },
-          { name: belowEutectoid ? '低温莱氏体（Ld′）' : '莱氏体（Ld）', fraction: 100 - primary },
-        ], '按共晶温度处的杠杆关系估算；低于共析温度后，奥氏体转变后的产物计入原组织组成物。');
+          { name: belowEutectoid ? '珠光体' : '初生奥氏体', fraction: transformedPrimary },
+          { name: belowEutectoid ? '二次渗碳体' : '二次渗碳体（Fe₃CⅡ）', fraction: secondaryCementite },
+          { name: belowEutectoid ? '低温莱氏体（Ld′）' : '莱氏体（Ld）', fraction: ledeburite },
+        ], '初生奥氏体与莱氏体按共晶温度杠杆关系计算；二次渗碳体按初生奥氏体沿 Acm 线的含碳量变化进一步分配。');
       }
       const cementite = (c - cC) / (cFe3C - cC) * 100;
       return normalized([

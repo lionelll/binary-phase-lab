@@ -582,6 +582,8 @@
 .microstructure-summary strong {
   color: #7ddcff;
   font-size: var(--lab-balance-value-size);
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .microstructure-fractions,
@@ -613,7 +615,8 @@
   color: #eaf6ff;
   font-size: var(--lab-balance-meta-size);
   line-height: 1.45;
-  overflow-wrap: anywhere;
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .microstructure-fraction-row b {

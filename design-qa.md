@@ -22,6 +22,8 @@
   - `docs/design-qa-invariant-solid-line-reference.png`
   - `docs/design-qa-topbar-actions-reference.png`
   - `docs/design-qa-teaching-card-removal-reference.png`
+  - `/var/folders/gm/269pzhjj72gfqhyfwcwwcr3h0000gn/T/codex-clipboard-d883f146-daf6-4c8f-8f9f-64d40e58fc1a.png`
+  - `/var/folders/gm/269pzhjj72gfqhyfwcwwcr3h0000gn/T/codex-clipboard-d2b7155d-3eef-488c-a24f-b9b99b0da87b.png`
 - implementation screenshots:
   - `docs/design-qa-stage-heading.png`
   - `docs/design-qa-panel-heading.png`
@@ -48,6 +50,7 @@
   - `docs/design-qa-invariant-solid-line-implementation.jpg`
   - `docs/design-qa-topbar-actions-implementation.jpg`
   - `docs/design-qa-teaching-card-removal-implementation.jpg`
+  - `/private/tmp/binary-microstructure-qa-20260821/implementation-1440-revised.png`
 - normalized comparison:
   - `docs/design-qa-typography-comparison.png`
   - `docs/design-qa-selector-content-removal-comparison.png`
@@ -62,6 +65,7 @@
   - `docs/design-qa-invariant-solid-line-comparison.png`
   - `docs/design-qa-topbar-actions-comparison.png`
   - `docs/design-qa-teaching-card-removal-comparison.png`
+  - `/private/tmp/binary-microstructure-qa-20260821/comparison-revised.png`
 - source project: `材科基晶体结构部分/crystal-structure-lab`
 - implementation project: `材科基二元相图部分/binary-phase-lab`
 - viewport: `1280px` 宽；浏览器设备像素比为 `2`
@@ -78,7 +82,8 @@
   - 侧栏严格一致性复核：晶体结构与二元相图均在 `1280 × 720` CSS 视口、DPR `1` 下截取；对照图将两个 `290 × 710` 侧栏裁切并排放置
   - 当前信息卡复核：晶体结构与二元相图均在 `1280 × 720` CSS 视口下截取；浏览器截图输出已归一为 CSS 像素，两个 `624px` 宽卡片并排对照
   - 实验参数与辅助显示标题复核：产品标注截图按宽度归一到 `290px`，与 `1280 × 720` CSS 视口下的二元相图左栏裁切并排对照
-- state: 晶体结构与二元相图的默认页面；二元相图另测试了切换至“Pt–Ag 包晶相图”
+  - 显微组织三项含量复核：产品截图分别为 `331 × 221`、`531 × 266`；实现为 `1440 × 900` CSS 视口、DPR `1`，对照图将实现等比缩放到 `266px` 高后与产品全景并排，未拉伸或裁切
+- state: 晶体结构与二元相图的默认页面；另测试 Pt–Ag，以及 Fe–Fe₃C `1.2% C / 850℃` 两组织状态、`3.0% C / 850℃` 三组织状态
 
 ## Full-view comparison evidence
 
@@ -178,6 +183,7 @@
 - 右栏信息架构：教学解析卡已删除；“显微组织及相对含量”从左栏功能入口迁移为右栏常驻卡片，位于“相平衡”下方、“反应信息”上方。卡片同时显示冷却阶段、当前显微组织、组织相对含量条和组织形成过程。
 - 功能模块精简：左栏移除“相图结构”“冷却过程”“金相显微组织”三个入口，仅保留“杠杆定律”和“三相反应”。相图结构继续常驻中央画布，自动凝固继续由顶栏按钮启动，因此没有删除底层能力。
 - 组织相对含量：Cu–Ni 和反应前状态使用实时相平衡比例；Pb–Sn 在共晶温度处按初生相/共晶组织应用杠杆关系；Fe–Fe₃C 按共析或共晶温度计算先共析组织、珠光体、莱氏体及一次/二次渗碳体。三相反应进行中明确提示比例随反应进度变化，不显示虚假的唯一比例。
+- 显微组织名称与三项比例：组织含量名称现在逐项使用“当前显微组织”的同名组成物。Fe–Fe₃C `3.0% C / 850℃` 浏览器实测为“初生奥氏体 `49.1%` + 二次渗碳体（Fe₃CⅡ）`10.3%` + 莱氏体（Ld）`40.6%`”，合计 `100.0%`；`1.2% C / 850℃` 的二次渗碳体名称也与摘要完全一致。长名称采用按组成物换行，括号及下角标不再被拆开。
 
 ## Comparison history
 
@@ -213,6 +219,8 @@
 30. Fe–Fe₃C 低碳区相标注：将 `α` 单相区引线文字再向下移 `14px`；将 `α + γ` 标签锚点由 `[0.18% C, 800℃]` 调整至接近该三角相区几何中心的 `[0.27% C, 790℃]`。相界、相区轮廓和计算数据不变。
 31. Fe–Fe₃C 组织标注避让：保留 `F + Fe₃CⅢ` 组织标注位置，将 P 点文字从 727℃ 水平线下方移至点位右上方，通过引线与 P 点关联。新增包围盒回归测试，要求 P 点文字与所有组织标注均不重叠。
 32. Fe–Fe₃C 组织标注最终收尾：独立浏览器包围盒复核发现 `F + Fe₃CⅢ` 与 `F + P` 尚有约 `18.2 × 3.2px` 的轻微擦碰；保留窄区引线标注，将 `F + P` 由 `628℃` 下移至 `610℃`。回归测试扩展为所有组织标签两两检查，不再只检查 P 点文字。
+33. 显微组织计算修复前：相对含量条直接复用了相名，导致“当前显微组织”的“二次渗碳体（Fe₃CⅡ）”被显示成“渗碳体”；亚共晶白口铸铁的三组成物摘要只输出两条比例，漏掉二次渗碳体。
+34. 显微组织计算修复后：以当前显微组织组成物作为名称真值；Pb–Sn 低温组织按两条溶解度线拆分初生相、共晶组织和二次相，Fe–Fe₃C 亚共晶白口铸铁按共晶杠杆关系与当前 Acm 成分拆分初生奥氏体/珠光体、二次渗碳体和莱氏体。新增两组织、三组织、跨四相图名称一致性测试。浏览器在 `1440 × 900` 实测三项合计 `100.0%`，标题“相平衡成分及相对含量”完整显示，控制台无 error/warning；首次对照发现化学式括号被强制拆行，改为按组成物边界换行后复核通过。
 
 ## Findings
 
