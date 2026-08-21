@@ -22,16 +22,16 @@ export const cuNi: PhaseDiagramDefinition = {
   ],
   regions: [
     {
-      id: 'liquid', label: 'L', phases: ['L'], labelAnchor: [55, 1480], teaching: '合金完全处于液态，继续冷却到液相线后开始析出 α 固溶体。',
+      id: 'liquid', label: 'L', phases: ['L'], labelAnchor: [55, 1480],
       outline: [{ type: 'boundary', boundaryId: 'liquidus' }, { type: 'line', points: [[100, 1550], [0, 1550]] }],
     },
     {
-      id: 'liquid-alpha', label: 'L + α', phases: ['L', 'α'], labelAnchor: [53, 1280], teaching: '液相与 α 固溶体平衡共存。等温线两端分别给出液相和固相成分。',
+      id: 'liquid-alpha', label: 'L + α', phases: ['L', 'α'], labelAnchor: [53, 1280],
       tieLine: { left: { phase: 'L', boundaryId: 'liquidus' }, right: { phase: 'α', boundaryId: 'solidus' } },
       outline: [{ type: 'boundary', boundaryId: 'liquidus' }, { type: 'boundary', boundaryId: 'solidus', reverse: true }],
     },
     {
-      id: 'alpha', label: 'α', phases: ['α'], labelAnchor: [58, 1050], teaching: '合金已经完全凝固为 Cu–Ni 置换型 α 固溶体。',
+      id: 'alpha', label: 'α', phases: ['α'], labelAnchor: [58, 1050],
       outline: [{ type: 'boundary', boundaryId: 'solidus' }, { type: 'line', points: [[100, 800], [0, 800]] }],
     },
   ],
@@ -47,5 +47,4 @@ export const cuNi: PhaseDiagramDefinition = {
     { id: 'p-monel', label: '蒙乃尔合金（67% Ni）', composition: 67, temperature: 1360 },
   ],
   defaultState: { composition: 40, temperature: 1260 },
-  teaching: { overview: 'Cu 与 Ni 在液态和固态均完全互溶，是理解液相线、固相线和杠杆定律的经典匀晶体系。' },
 };

@@ -216,7 +216,7 @@ describe('phase diagram catalog', () => {
       expect(state.kind).toBe('invariant');
       expect(state.equilibrium).toHaveLength(3);
       expect(state.equilibrium.every((item) => item.fraction === 0)).toBe(true);
-      expect(state.teaching).toContain('不存在唯一比例');
+      expect(state.invariant).not.toBeNull();
     }
   });
 
@@ -255,7 +255,6 @@ describe('phase diagram catalog', () => {
       const state = evaluatePhaseState(feC, composition, temperature);
       expect(state.kind, `${composition}, ${temperature}`).toBe('region');
       expect(state.regionLabel).toBe('α');
-      expect(state.teaching).not.toContain('位于相界上');
       expect(state.boundaryId).not.toBeNull();
     }
     const gp = feC.boundaries.find((boundary) => boundary.id === 'gp')!;
@@ -263,7 +262,6 @@ describe('phase diagram catalog', () => {
     const boundaryState = evaluatePhaseState(feC, exactComposition + feC.compositionAxis.max * 5e-6, 800);
     expect(boundaryState.kind).toBe('boundary');
     expect(boundaryState.boundaryId).toBe('gp');
-    expect(boundaryState.teaching).toContain('位于相界上');
   });
 
   it('still reports normal-width single-phase boundaries as boundary states', () => {
@@ -281,7 +279,6 @@ describe('phase diagram catalog', () => {
       const state = evaluatePhaseState(diagram, composition, temperature);
       expect(state.kind, `${diagram.id}/${boundaryId}@${temperature}`).toBe('boundary');
       expect(state.boundaryId).toBe(boundaryId);
-      expect(state.teaching).toContain('位于相界上');
     }
   });
 

@@ -50,7 +50,6 @@ export interface PhaseRegion {
     left: TieLineEnd;
     right: TieLineEnd;
   };
-  teaching: string;
 }
 
 export interface DiagramAnnotation {
@@ -74,7 +73,6 @@ export interface InvariantReaction {
     right: number;
   };
   phaseCompositions: Array<{ phase: string; composition: number }>;
-  teaching: string;
 }
 
 /** 组织组成物标注（金相形貌视角）。与相标注互斥显示。 */
@@ -136,12 +134,6 @@ export interface PhaseDiagramDefinition {
   constituentDividers?: ConstituentDivider[];
   presets?: AlloyPreset[];
   defaultState: { composition: number; temperature: number };
-  teaching: { overview: string };
-}
-
-export interface BoundaryIntersection {
-  boundaryId: string;
-  composition: number;
 }
 
 export interface PhaseFraction {
@@ -162,5 +154,4 @@ export interface PhaseState {
   equilibrium: PhaseFraction[];
   invariant: InvariantReaction | null;
   boundaryId: string | null;
-  teaching: string;
 }

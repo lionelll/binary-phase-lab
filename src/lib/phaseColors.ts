@@ -85,6 +85,3 @@ function withAlpha(hex: string, alpha: number): string {
 export function regionColor(phases: string[]): string {
   return withAlpha(regionBaseColor(phases), REGION_FILL_ALPHA);
 }
-
-/** 半透明填充下底色始终偏暗，相区标签统一用浅色字。 */
-export function readableInk(): string { return '#eef5ff'; }

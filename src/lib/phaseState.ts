@@ -1,7 +1,6 @@
 import type { InvariantReaction, PhaseDiagramDefinition, PhaseState } from '../data/types';
 import { calculatePhaseFractions } from './lever';
 import { compositionsAt, distanceToBoundary, regionAt, regionWidthAt } from './geometry';
-import { teachingFor } from './teaching';
 
 const INVARIANT_TOLERANCE = 0.25;
 /** 归一化判定容差，约合 2 个绘图单位。 */
@@ -60,15 +59,23 @@ export function evaluatePhaseState(
       kind: 'invariant', composition: safeComposition, temperature: invariant.temperature,
       regionId: invariant.id, regionLabel: '三相平衡', phases: invariant.phaseCompositions.map((item) => item.phase),
       equilibrium: invariant.phaseCompositions.map((item) => ({ ...item, fraction: 0 })), invariant, boundaryId: null,
-      teaching: `${invariant.teaching} 三相共存时比例随反应进度变化，不存在唯一比例。`,
     };
   }
 
   const compositionScale = diagram.compositionAxis.max - diagram.compositionAxis.min;
   const temperatureScale = diagram.temperatureAxis.max - diagram.temperatureAxis.min;
-  const nearestBoundary = diagram.boundaries.find(
-    (item) => distanceToBoundary(item, safeComposition, safeTemperature, compositionScale, temperatureScale) < BOUNDARY_TOLERANCE,
-  ) ?? null;
+  const nearestBoundaryMatch = diagram.boundaries
+    .map((boundary) => ({
+      boundary,
+      distance: distanceToBoundary(boundary, safeComposition, safeTemperature, compositionScale, temperatureScale),
+    }))
+    .reduce<{ boundary: (typeof diagram.boundaries)[number] | null; distance: number }>(
+      (nearest, candidate) => candidate.distance < nearest.distance ? candidate : nearest,
+      { boundary: null, distance: Number.POSITIVE_INFINITY },
+    );
+  const nearestBoundary = nearestBoundaryMatch.distance < BOUNDARY_TOLERANCE
+    ? nearestBoundaryMatch.boundary
+    : null;
   let region = regionAt(diagram, safeComposition, safeTemperature);
   if (!region) {
     // 相区多边形的外沿与坐标轴上下限完全重合，点正好落在边上时 pointInPolygon 判否。
@@ -107,7 +114,7 @@ export function evaluatePhaseState(
           { phase: leftPhase, composition: orderedLeft, fraction: fractions.left },
           { phase: rightPhase, composition: orderedRight, fraction: fractions.right },
         ],
-        invariant: null, boundaryId: nearestBoundary?.id ?? null, teaching: teachingFor(diagram, region, isSemanticBoundary ? 'boundary' : 'region'),
+        invariant: null, boundaryId: nearestBoundary?.id ?? null,
       };
     }
   }
@@ -117,6 +124,6 @@ export function evaluatePhaseState(
     kind: isSemanticBoundary ? 'boundary' : 'region', composition: safeComposition, temperature: safeTemperature,
     regionId: region?.id ?? null, regionLabel: region?.label ?? nearestBoundary?.phases.join(' / ') ?? '图外状态', phases: fallbackPhases,
     equilibrium: fallbackPhases.slice(0, 1).map((phase) => ({ phase, composition: safeComposition, fraction: 100 })),
-    invariant: null, boundaryId: nearestBoundary?.id ?? null, teaching: teachingFor(diagram, region, isSemanticBoundary ? 'boundary' : 'region'),
+    invariant: null, boundaryId: nearestBoundary?.id ?? null,
   };
 }

@@ -8,6 +8,9 @@ import { monotoneCubic } from './interpolate';
 
 const ROOT_EPSILON = 1e-7;
 const cache = new WeakMap<PhaseRegion, Point[]>();
+// 40 段近似在短而弯曲的 A₃/Acm 与端点固相线附近可产生约 1px 的相区漂移；
+// 120 段仍只在首次加载时生成并缓存，同时能让相区判定贴合实际插值曲线。
+const DEFAULT_REGION_SAMPLES = 120;
 
 function uniqueSorted(values: number[], epsilon = 1e-5): number[] {
   return values
@@ -96,9 +99,9 @@ export function sampleBoundary(
 export function buildRegionPolygon(
   diagram: PhaseDiagramDefinition,
   region: PhaseRegion,
-  samples = 40,
+  samples = DEFAULT_REGION_SAMPLES,
 ): Point[] {
-  if (samples === 40) {
+  if (samples === DEFAULT_REGION_SAMPLES) {
     const cached = cache.get(region);
     if (cached) return cached;
   }
@@ -116,7 +119,7 @@ export function buildRegionPolygon(
   const deduped = points.filter(
     (point, index) => index === 0 || Math.abs(point.x - points[index - 1].x) > 1e-8 || Math.abs(point.y - points[index - 1].y) > 1e-8,
   );
-  if (samples === 40) cache.set(region, deduped);
+  if (samples === DEFAULT_REGION_SAMPLES) cache.set(region, deduped);
   return deduped;
 }
 
