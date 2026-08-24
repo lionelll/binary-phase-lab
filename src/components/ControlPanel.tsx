@@ -32,13 +32,14 @@ function number(value: number, max: number) { return formatNumericValue(value, m
 /** 与晶体结构、三元相图一致：单列布局下左栏面板默认折叠，避免把主视图挤到第二屏。 */
 const isMobileViewport = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 820px)').matches;
 
-function CollapsiblePanel({ id, title, className, children }: {
-  id: string; title: string; className?: string;
+function CollapsiblePanel({ id, title, className, desktopCollapsible = false, children }: {
+  id: string; title: string; className?: string; desktopCollapsible?: boolean;
   /** 传函数可拿到"手机端选完即收起"的回调，与晶体结构、三元相图的交互一致。 */
   children: ReactNode | ((collapseOnMobile: () => void) => ReactNode);
 }) {
   const [mobile, setMobile] = useState(isMobileViewport);
-  const [collapsed, setCollapsed] = useState(true);
+  const [mobileCollapsed, setMobileCollapsed] = useState(true);
+  const [desktopCollapsed, setDesktopCollapsed] = useState(true);
   useEffect(() => {
     const media = window.matchMedia('(max-width: 820px)');
     const sync = () => setMobile(media.matches);
@@ -46,11 +47,13 @@ function CollapsiblePanel({ id, title, className, children }: {
     media.addEventListener('change', sync);
     return () => media.removeEventListener('change', sync);
   }, []);
-  // 桌面端由 CSS 强制展开，这里同步推导，保证 aria-expanded 不会残留手机端的折叠状态。
-  const expanded = !mobile || !collapsed;
-  const toggle = useCallback(() => { if (isMobileViewport()) setCollapsed((current) => !current); }, []);
-  const collapseOnMobile = useCallback(() => { if (isMobileViewport()) setCollapsed(true); }, []);
-  return <section className={`panel mobile-collapsible ${expanded ? 'is-expanded' : 'is-collapsed'} ${className ?? ''}`}>
+  const expanded = mobile ? !mobileCollapsed : desktopCollapsible ? !desktopCollapsed : true;
+  const toggle = useCallback(() => {
+    if (mobile) setMobileCollapsed((current) => !current);
+    else if (desktopCollapsible) setDesktopCollapsed((current) => !current);
+  }, [desktopCollapsible, mobile]);
+  const collapseOnMobile = useCallback(() => { if (mobile) setMobileCollapsed(true); }, [mobile]);
+  return <section className={`panel mobile-collapsible ${desktopCollapsible ? 'desktop-collapsible' : ''} ${expanded ? 'is-expanded' : 'is-collapsed'} ${className ?? ''}`}>
     <button type="button" className="panel-heading panel-heading-button" aria-expanded={expanded} aria-controls={id} onClick={toggle}>
       <span>{title}</span><Icon name="chevron" className="collapse-chevron"/>
     </button>
@@ -90,7 +93,7 @@ export function ControlPanel(props: Props) {
         ))}
       </div>
     </>}</CollapsiblePanel>
-    {diagram.presets && <CollapsiblePanel id="panel-presets" title="典型合金预设" className="preset-panel">{(collapseOnMobile) =>
+    {diagram.presets && <CollapsiblePanel id="panel-presets" title="典型合金预设" className="preset-panel" desktopCollapsible>{(collapseOnMobile) =>
       <div className="preset-block"><div className="preset-list">{numberedPresets(diagram.presets).map((preset) => (
         <button type="button" className="preset-chip" key={preset.id}
           onClick={() => { props.onPreset(preset.composition, preset.temperature); collapseOnMobile(); }}>

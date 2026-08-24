@@ -872,8 +872,7 @@
   }
 }
 
-/* 可折叠面板：与晶体结构、三元相图同一套交互。桌面端始终展开，
-   仅在单列布局下允许折叠，标题栏本身就是开关。 */
+/* 可折叠面板：移动端全部可折叠；典型合金预设额外支持桌面端折叠。 */
 .panel-heading-button {
   width: 100%;
   display: flex;
@@ -894,6 +893,27 @@
   transition: transform .18s ease;
 }
 
+.desktop-collapsible .panel-heading-button {
+  cursor: pointer;
+}
+
+.desktop-collapsible .collapse-chevron {
+  display: block;
+  flex: 0 0 auto;
+}
+
+.mobile-collapsible.is-collapsed .collapsible-content {
+  display: none;
+}
+
+.mobile-collapsible.is-collapsed .collapse-chevron {
+  transform: rotate(-90deg);
+}
+
+.mobile-collapsible.is-collapsed {
+  padding-bottom: 0;
+}
+
 @media (max-width: 820px) {
   .panel-heading-button {
     cursor: pointer;
@@ -904,15 +924,4 @@
     flex: 0 0 auto;
   }
 
-  .mobile-collapsible.is-collapsed .collapsible-content {
-    display: none;
-  }
-
-  .mobile-collapsible.is-collapsed .collapse-chevron {
-    transform: rotate(-90deg);
-  }
-
-  .mobile-collapsible.is-collapsed {
-    padding-bottom: 0;
-  }
 }
